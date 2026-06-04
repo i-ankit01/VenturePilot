@@ -5,28 +5,20 @@ Every agent reads from this and writes back to this.
 No agent talks to another agent directly — only through state.
 
 Flow:
-    User Input → Planner fills top section
-               → Research fills research_output
-               → Competitor fills competitor_output
-               → ... and so on
-"""
-
-"""
-state.py — The shared whiteboard for all agents.
-
-Every agent reads from this and writes back to this.
-No agent talks to another agent directly — only through state.
-
-Flow:
     User Input → Planner refines and fills top section
                → Research fills research_output
-               → Competitor fills competitor_output
-               → ... and so on
+               → Competitor + Product run in parallel, fill their slots
+               → Branding fills branding_output
+               → Finance + GTM run in parallel, fill their slots
+               → Pitch fills pitch_output
+               → Report assembles everything into final file
 """
 
 from typing import TypedDict, Optional, List
-from schemas.research import MarketResearchOutput
-from schemas.planner import PlannerOutput
+from schemas.planner    import PlannerOutput
+from schemas.research   import MarketResearchOutput
+from schemas.competitor import CompetitorOutput
+from schemas.product    import ProductOutput
 
 
 class AppState(TypedDict):
@@ -38,18 +30,18 @@ class AppState(TypedDict):
     stage: Optional[str]               # e.g. "idea", "mvp", "scaling"
 
     # ── AGENT OUTPUTS (each agent fills its own slot) ──────────────────────
-    planner_output: Optional[PlannerOutput]
-    research_output: Optional[MarketResearchOutput]
+    planner_output:    Optional[PlannerOutput]
+    research_output:   Optional[MarketResearchOutput]
+    competitor_output: Optional[CompetitorOutput]     # was dict, now typed
+    product_output:    Optional[ProductOutput]        # was dict, now typed
 
     # filled later as you build more agents:
-    competitor_output: Optional[dict]
-    product_output: Optional[dict]
-    branding_output: Optional[dict]
-    finance_output: Optional[dict]
-    gtm_output: Optional[dict]
-    pitch_output: Optional[dict]
+    branding_output:   Optional[dict]
+    finance_output:    Optional[dict]
+    gtm_output:        Optional[dict]
+    pitch_output:      Optional[dict]
     final_report_path: Optional[str]
 
     # ── META (for graph routing & error handling) ──────────────────────────
-    errors: Optional[List[str]]            # any agent can log errors here
-    completed_agents: Optional[List[str]]  # track what has run
+    errors:             Optional[List[str]]           # any agent can log errors here
+    completed_agents:   Optional[List[str]]           # track what has run
