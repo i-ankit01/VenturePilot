@@ -7,9 +7,9 @@ No agent talks to another agent directly — only through state.
 Flow:
     User Input → Planner refines and fills top section
                → Research fills research_output
-               → Competitor + Product run in parallel, fill their slots
+               → Competitor + Product run in parallel
                → Branding fills branding_output
-               → Finance + GTM run in parallel, fill their slots
+               → Finance + GTM run in parallel
                → Pitch fills pitch_output
                → Report assembles everything into final file
 """
@@ -19,6 +19,7 @@ from schemas.planner    import PlannerOutput
 from schemas.research   import MarketResearchOutput
 from schemas.competitor import CompetitorOutput
 from schemas.product    import ProductOutput
+from schemas.branding   import BrandingOutput
 
 
 class AppState(TypedDict):
@@ -32,16 +33,16 @@ class AppState(TypedDict):
     # ── AGENT OUTPUTS (each agent fills its own slot) ──────────────────────
     planner_output:    Optional[PlannerOutput]
     research_output:   Optional[MarketResearchOutput]
-    competitor_output: Optional[CompetitorOutput]     # was dict, now typed
-    product_output:    Optional[ProductOutput]        # was dict, now typed
+    competitor_output: Optional[CompetitorOutput]
+    product_output:    Optional[ProductOutput]
+    branding_output:   Optional[BrandingOutput]
 
     # filled later as you build more agents:
-    branding_output:   Optional[dict]
     finance_output:    Optional[dict]
     gtm_output:        Optional[dict]
     pitch_output:      Optional[dict]
     final_report_path: Optional[str]
 
     # ── META (for graph routing & error handling) ──────────────────────────
-    errors:             Optional[List[str]]           # any agent can log errors here
-    completed_agents:   Optional[List[str]]           # track what has run
+    errors:             Optional[List[str]]
+    completed_agents:   Optional[List[str]]
