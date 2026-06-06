@@ -4,14 +4,26 @@ state.py — The shared whiteboard for all agents.
 Every agent reads from this and writes back to this.
 No agent talks to another agent directly — only through state.
 
-Flow:
-    User Input → Planner refines and fills top section
-               → Research fills research_output
-               → Competitor + Product run in parallel
-               → Branding fills branding_output
-               → Finance + GTM run in parallel
-               → Pitch fills pitch_output
-               → Report assembles everything into final file
+Full pipeline flow:
+    User Input
+        ↓
+    planner        → refines idea/industry/target_market, fills planner_output
+        ↓
+    research       → fills research_output
+        ↓
+    ┌──────────────┐
+    competitor     product      (parallel)
+    └──────────────┘
+        ↓
+    branding       → fills branding_output
+        ↓
+    ┌──────────────┐
+    finance        gtm          (parallel)
+    └──────────────┘
+        ↓
+    pitch          → fills pitch_output
+        ↓
+    report         → fills final_report_path
 """
 
 from typing import TypedDict, Optional, List
@@ -20,29 +32,31 @@ from schemas.research   import MarketResearchOutput
 from schemas.competitor import CompetitorOutput
 from schemas.product    import ProductOutput
 from schemas.branding   import BrandingOutput
+from schemas.finance    import FinanceOutput
+from schemas.gtm        import GTMOutput
 
 
 class AppState(TypedDict):
-    # ── INPUT (filled by user, then overwritten/refined by planner) ───────
+    # ── INPUT (filled by user, then overwritten/refined by planner) ────────
     idea: str                          # raw → refined by planner
     industry: str                      # raw → refined by planner
     target_market: str                 # raw → refined by planner
-    budget: Optional[str]              # e.g. "$5000", "bootstrapped"
+    budget: Optional[str]              # e.g. "₹3L", "$5000", "bootstrapped"
     stage: Optional[str]               # e.g. "idea", "mvp", "scaling"
 
-    # ── AGENT OUTPUTS (each agent fills its own slot) ──────────────────────
-    planner_output:    Optional[PlannerOutput]
-    research_output:   Optional[MarketResearchOutput]
-    competitor_output: Optional[CompetitorOutput]
-    product_output:    Optional[ProductOutput]
-    branding_output:   Optional[BrandingOutput]
+    # ── AGENT OUTPUTS ─────────────────────────────────────────────────────
+    planner_output:    Optional[PlannerOutput]       # ← planner
+    research_output:   Optional[MarketResearchOutput] # ← research
+    competitor_output: Optional[CompetitorOutput]    # ← competitor (parallel w/ product)
+    product_output:    Optional[ProductOutput]       # ← product   (parallel w/ competitor)
+    branding_output:   Optional[BrandingOutput]      # ← branding
+    finance_output:    Optional[FinanceOutput]       # ← finance   (parallel w/ gtm)
+    gtm_output:        Optional[GTMOutput]           # ← gtm       (parallel w/ finance)
 
-    # filled later as you build more agents:
-    finance_output:    Optional[dict]
-    gtm_output:        Optional[dict]
-    pitch_output:      Optional[dict]
-    final_report_path: Optional[str]
+    # ── REMAINING (built next) ────────────────────────────────────────────
+    pitch_output:      Optional[dict]                # ← pitch  (TODO)
+    final_report_path: Optional[str]                 # ← report (TODO)
 
-    # ── META (for graph routing & error handling) ──────────────────────────
-    errors:             Optional[List[str]]
-    completed_agents:   Optional[List[str]]
+    # ── META ──────────────────────────────────────────────────────────────
+    errors:            Optional[List[str]]           # any agent logs errors here
+    completed_agents:  Optional[List[str]]           # tracks what has run
