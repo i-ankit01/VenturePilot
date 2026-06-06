@@ -33,9 +33,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("antialiased", poppins.className, "font-sans", oxanium.variable)}
+      className={cn("antialiased", "dark", oxanium.variable, "font-sans")}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
+        {children}
+      </body>
     </html>
   );
 }

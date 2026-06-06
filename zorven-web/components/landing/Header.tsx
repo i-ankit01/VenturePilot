@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -10,8 +11,18 @@ export default function Header() {
     <header className="fixed top-0 w-full z-50 border-b border-gray-800/50 dark:bg-black/80 bg-white backdrop-blur-md">
       <nav className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="text-xl font-semibold dark:text-white text-black">
-            Logo
+          <div className="flex items-center gap-3">
+            <Image
+              src="/zorvenLogo.png"
+              alt="Zorven logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover"
+              priority
+            />
+            <div className="text-xl font-semibold dark:text-white text-black">
+              zorven.ai
+            </div>
           </div>
 
           <div className="hidden md:flex items-center justify-center gap-8 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -36,7 +47,12 @@ export default function Header() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <Button type="button" variant="default" size="sm">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="h-10 rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20"
+            >
               Sign in
             </Button>
           </div>
@@ -78,7 +94,12 @@ export default function Header() {
             </a>
 
             <div className="pt-4 border-t border-gray-800/50">
-              <Button type="button" variant="default" size="sm">
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                className="h-10 w-full rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20"
+              >
                 Sign in
               </Button>
             </div>

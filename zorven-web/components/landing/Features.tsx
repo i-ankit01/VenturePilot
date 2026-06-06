@@ -5,45 +5,51 @@ import {
   IconLock,
   IconWorld,
   IconCode,
+  IconChartBar,
+  IconTargetArrow,
+  IconTrendingUp,
+  IconPresentationAnalytics,
+  IconPalette,
+  IconRoute,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 const features = [
   {
-    title: "Instant Setup",
+    title: "Market Intelligence",
     description:
-      "No installation needed. Start coding immediately in your browser with zero configuration.",
-    icon: <IconTerminal2 />,
+      "Discover market opportunities, customer pain points, industry trends, and TAM/SAM/SOM analysis powered by AI research.",
+    icon: <IconChartBar />,
   },
   {
-    title: "Realtime Collaboration",
+    title: "Competitor Analysis",
     description:
-      "Share your workspace, pair program, and review code together with your team in real-time.",
-    icon: <IconUsers />,
+      "Analyze competitors, pricing strategies, market positioning, and uncover opportunities to differentiate your startup.",
+    icon: <IconTargetArrow />,
   },
   {
-    title: "One-Click Deploy",
+    title: "Brand & Positioning",
     description:
-      "Deploy your applications instantly with a single click. No complex DevOps required.",
-    icon: <IconRocket />,
+      "Generate startup names, taglines, value propositions, messaging frameworks, and a complete brand identity.",
+    icon: <IconPalette />,
   },
   {
-    title: "Secure by Default",
+    title: "MVP Planning",
     description:
-      "Enterprise-grade security with encrypted connections and isolated environments.",
-    icon: <IconLock />,
+      "Define core features, prioritize development, and generate execution-ready product roadmaps and milestones.",
+    icon: <IconRoute />,
   },
   {
-    title: "Access Anywhere",
+    title: "Go-To-Market Strategy",
     description:
-      "Code from any device, anywhere. Your workspace follows you wherever you go.",
-    icon: <IconWorld />,
+      "Receive launch plans, acquisition channels, growth loops, content ideas, and customer acquisition strategies.",
+    icon: <IconTrendingUp />,
   },
   {
-    title: "Full Terminal Access",
+    title: "Investor-Ready Assets",
     description:
-      "Complete command-line access with pre-installed tools and custom environment support.",
-    icon: <IconCode />,
+      "Generate pitch decks, business reports, financial projections, and startup dashboards ready for demos and fundraising.",
+    icon: <IconPresentationAnalytics />,
   },
 ];
 
@@ -63,7 +69,7 @@ const Feature = ({
       className={cn(
         "flex flex-col lg:border-r py-10 relative group/feature border-border",
         (index === 0 || index === 3) && "lg:border-l border-border",
-        index < 3 && "lg:border-b border-border"
+        index < 3 && "lg:border-b border-border",
       )}
     >
       {index < 3 && (
@@ -94,11 +100,11 @@ const Features = () => {
       <div className="container mx-auto px-4">
         <div className="mb-16 text-center animate-fade-in">
           <h2 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
-            Everything you need to build
+            Everything You Need To Launch
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground dark:text-muted-foreground">
-            A complete development environment in your browser with all the tools and features
-            you need to bring your ideas to life.
+            From idea validation to go-to-market strategy, Zorven generates
+            every critical component needed to build and launch a startup.
           </p>
         </div>
 
