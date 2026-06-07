@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Poppins, Oxanium } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { DM_Mono } from "next/font/google";
+const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 const oxanium = Oxanium({subsets:['latin'],variable:'--font-sans'});
 
@@ -33,7 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("antialiased", "dark", oxanium.variable, "font-sans")}
+      className={cn("antialiased", "dark", oxanium.variable, dmMono.variable, "font-sans")}
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         {children}
