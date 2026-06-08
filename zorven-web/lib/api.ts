@@ -18,10 +18,13 @@ export interface PartialResult {
   // Research
   research_output?: {
     market_size: string;
-    market_growth: string;
-    key_trends: string[];
-    target_segments: string[];
-    market_summary: string;
+    problem_statement: string;
+    target_audience: string;
+    market_trends: string[];
+    pain_points: string[];
+    opportunity_gap: string;
+    key_assumptions: string[];
+    sources: string[];
   };
   // Competitor
   competitor_output?: {
