@@ -7,13 +7,17 @@ export type PipelineStatus = "idle" | "running" | "done" | "error";
 export interface PartialResult {
   // Planner
   planner_output?: {
-    startup_name: string;
-    one_liner: string;
-    problem: string;
-    solution: string;
-    target_market: string;
+    refined_idea: string;
     industry: string;
+    target_market: string;
+    startup_type: string;
     stage: string;
+    budget: string;
+    one_liner: string;
+    core_problem: string;
+    unique_angle: string;
+    geography: string;
+    agents_to_run: string[];
   };
   // Research
   research_output?: {
@@ -34,57 +38,173 @@ export interface PartialResult {
       strengths: string[];
       weaknesses: string[];
       pricing: string;
+      target_segment: string;
     }[];
-    competitive_advantage: string;
+    market_leader: string;
+    pricing_landscape: string;
+    feature_gaps: string[];
+    underserved_segments: string[];
+    suggested_differentiators: string[];
+    sources: string[];
   };
   // Product
   product_output?: {
-    core_features: { name: string; description: string; priority: string }[];
-    pricing_tiers: { name: string; price: string; features: string[] }[];
-    roadmap: { phase: string; duration: string; features: string[] }[];
+    product_name_suggestion: string;
+    usp: string;
+    mvp_scope: string;
+    core_features: { name: string; description: string; priority: string; solves_pain: string }[];
+    suggested_tech_stack: string[];
+    monetization_model: string;
+    pricing_recommendation: string;
+    roadmap: { phase: string; timeline: string; deliverables: string[] }[];
+    product_risks: string[];
   };
   // Branding
   branding_output?: {
-    brand_name: string;
+    name_suggestions: { name: string; rationale: string; domain_available: string; tagline_fit: string }[];
+    recommended_name: string;
     taglines: string[];
-    domain_suggestions: string[];
-    color_palette: { name: string; hex: string; psychology: string }[];
-    typography: { heading: string; body: string };
-    icp_story: string;
+    recommended_tagline: string;
+    brand_personality: string;
+    brand_tone: string;
+    brand_voice_description: string;
+    positioning_statement: string;
+    elevator_pitch: string;
+    messaging_pillars: string[];
+    color_palette: { role: string; hex_code: string; color_name: string; usage: string; psychology: string }[];
+    color_palette_rationale: string;
+    typography: { role: string; font_name: string; source: string; why: string }[];
+    domain_suggestions: { domain: string; rationale: string }[];
+    icp_summary: string;
     logo_direction: string;
     brand_dos: string[];
     brand_donts: string[];
   };
   // Finance
   finance_output?: {
-    monthly_projections: { month: number; mrr: number; customers: number; expenses: number }[];
-    arr_year1: number;
-    ltv: number;
-    cac: number;
-    payback_months: number;
-    runway_months: number;
-    fundraising_recommendation: string;
+    pricing_tiers: {
+      name: string;
+      price_monthly: number;
+      price_annually: number;
+      currency: string;
+      features_included: string[];
+      target_user: string;
+      conversion_assumption: string;
+    }[];
+    pricing_strategy_rationale: string;
+    monthly_projections: {
+      month: number;
+      users_free: number;
+      users_paid: number;
+      mrr: number;
+      revenue: number;
+      expenses: number;
+      net_cashflow: number;
+      cumulative_cash: number;
+    }[];
+    saas_metrics: {
+      arr: number;
+      mrr_month_12: number;
+      mrr_month_1: number;
+      mrr_growth_rate: string;
+      churn_rate_assumed: string;
+      ltv: number;
+      cac: number;
+      ltv_cac_ratio: string;
+      payback_period_months: number;
+      gross_margin: string;
+      arpu: number;
+      nps_target: string;
+    };
+    runway: {
+      initial_capital: number;
+      monthly_burn_rate: number;
+      break_even_month: number;
+      runway_months: number;
+      runway_with_revenue_months: number;
+      cash_at_month_12: number;
+      burn_rate_breakdown: string[];
+    };
+    scenarios: { scenario: string; assumption: string; paid_users_month_12: number; mrr_month_12: number; arr_month_12: number; profitable: boolean }[];
+    financial_risks: string[];
+    cfo_advice: string[];
+    currency: string;
+    financial_model_assumptions: string[];
   };
   // GTM
   gtm_output?: {
-    first_100_users: string[];
+    first_100_users: {
+      total_timeline: string;
+      core_approach: string;
+      steps: string[];
+      where_to_find_them: string[];
+      hook_offer: string;
+      conversion_script: string;
+    };
+    channels: {
+      channel: string;
+      priority: string;
+      why_this_channel: string;
+      tactics: string[];
+      estimated_cac: string;
+      kpi: string;
+      when_to_start: string;
+    }[];
     weekly_plan: {
       week: number;
+      theme: string;
       phase: string;
-      milestone: string;
+      goals: string[];
+      tasks: string[];
+      channel_focus: string[];
+      success_metric: string;
+      milestone: boolean;
       milestone_label: string;
-      channel_focus: string;
     }[];
-    growth_experiments: string[];
-    scaling_strategy: { stage: string; users: string; tactics: string[] }[];
+    growth_experiments: {
+      name: string;
+      hypothesis: string;
+      how_to_run: string;
+      success_criteria: string;
+      effort: string;
+      potential_impact: string;
+      timeline: string;
+    }[];
+    scaling_strategy: {
+      phase: string;
+      timeframe: string;
+      primary_engine: string;
+      key_actions: string[];
+      budget_allocation: string;
+      unlock_condition: string;
+    }[];
+    content_strategy: string;
+    retention_strategy: string;
+    referral_strategy: string;
+    partnership_opportunities: string[];
+    north_star_metric: string;
+    gtm_risks: string[];
   };
   // Pitch
   pitch_output?: {
-    slides: { title: string; content: string; presenter_notes: string }[];
-    competitor_matrix: { feature: string; us: boolean; competitors: Record<string, boolean> }[];
-    financial_snapshot: string;
-    investor_qas: { question: string; answer: string }[];
-    follow_up_email: string;
+    deck_title: string;
+    total_slides: number;
+    recommended_duration: string;
+    pitch_narrative_summary: string;
+    slide_01_cover: { startup_name: string; tagline: string; one_liner: string; presenter_note: string };
+    slide_02_problem: { headline: string; pain_points: { headline: string; supporting: string }[]; emotional_hook: string; presenter_note: string };
+    slide_03_solution: { headline: string; solution_bullets: { headline: string; supporting: string }[]; aha_moment: string; presenter_note: string };
+    slide_04_product: { headline: string; core_features: string[]; demo_flow: string; tech_differentiator: string; presenter_note: string };
+    slide_05_market: { headline: string; tam: string; sam: string; som: string; market_tailwinds: string[]; presenter_note: string };
+    slide_06_business: { headline: string; model_description: string; pricing_tiers: string[]; unit_economics: string[]; presenter_note: string };
+    slide_07_traction: { headline: string; traction_points: { headline: string; supporting: string }[]; validation_quote: string; next_milestones: string[]; presenter_note: string };
+    slide_08_competition: { headline: string; competitor_matrix: { competitor_name: string; whatsapp_native: boolean; gst_compliant: boolean; auto_reminders: boolean; freelancer_focused: boolean; affordable_inr: boolean; is_us: boolean }[]; our_moat: string; presenter_note: string };
+    slide_09_gtm: { headline: string; phase_1: string; phase_2: string; phase_3: string; primary_channels: string[]; north_star: string; presenter_note: string };
+    slide_10_team: { headline: string; why_us: string; key_hires_needed: string[]; advisors_or_supporters: string; presenter_note: string };
+    slide_11_financials: { headline: string; snapshot: { arr_month_12: string; mrr_month_12: string; paid_users_month_12: string; break_even_month: string; ltv_cac: string; gross_margin: string; runway: string; raise_amount: string }; projection_narrative: string; key_assumptions: string[]; presenter_note: string };
+    slide_12_ask: { headline: string; raise_amount: string; use_of_funds: string[]; milestones_unlocked: string[]; closing_line: string; presenter_note: string };
+    hardest_questions: string[];
+    email_follow_up: string;
   };
 }
 
