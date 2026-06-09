@@ -1,3 +1,5 @@
+# uvicorn api.server:app --reload --port 8000
+
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -6,6 +8,7 @@ import uuid, os
 from main import run_venture_pilot
 from langgraph.graph import StateGraph
 from graph.workflow import build_graph
+import asyncio
 
 app = FastAPI()
 
@@ -56,18 +59,73 @@ class JobStatus(BaseModel):
 #         jobs[job_id].update({"status": "error", "errors": [str(e)]})
 
 # to stream the output after each agent 
-def run_pipeline_job(job_id: str, request: PitchRequest):
+# def run_pipeline_job(job_id: str, request: PitchRequest):
+#     jobs[job_id]["status"] = "running"
+#     jobs[job_id]["partial"] = {}   # ← stores agent outputs as they arrive
+
+#     graph = build_graph(checkpointing=False)
+
+#     initial_state = {
+#         "idea":           request.idea,
+#         "industry":       request.industry,
+#         "target_market":  request.target_market,
+#         "budget":         request.budget,
+#         "stage":          request.stage,
+#         "planner_output":    None,
+#         "research_output":   None,
+#         "competitor_output": None,
+#         "product_output":    None,
+#         "branding_output":   None,
+#         "finance_output":    None,
+#         "gtm_output":        None,
+#         "pitch_output":      None,
+#         "final_report_path": None,
+#         "errors":            None,
+#         "completed_agents":  None,
+#     }
+
+#     try:
+#         # .stream() yields {"node_name": state_snapshot} after each node
+#         for chunk in graph.stream(initial_state, stream_mode="updates"):
+#             node_name = list(chunk.keys())[0]
+#             node_state = chunk[node_name]
+
+#             # grab whatever output this agent just wrote
+#             output_key = f"{node_name}_output"
+#             if output_key in node_state and node_state[output_key] is not None:
+#                 output = node_state[output_key]
+#                 jobs[job_id]["partial"][output_key] = (
+#                     output.model_dump() if hasattr(output, "model_dump") else output
+#                 )
+
+#             # track completed agents
+#             completed = node_state.get("completed_agents") or []
+#             jobs[job_id]["completed_agents"] = completed
+
+#             # special case: report writes final_report_path not *_output
+#             if "final_report_path" in node_state:
+#                 jobs[job_id]["report_path"] = node_state["final_report_path"]
+
+#             print(f"[server] Agent done: {node_name}")
+
+#         jobs[job_id]["status"] = "done"
+
+#     except Exception as e:
+#         jobs[job_id].update({"status": "error", "errors": [str(e)]})
+
+# to run asynchronoulsy
+async def run_pipeline_job(job_id: str, request: PitchRequest):
     jobs[job_id]["status"] = "running"
-    jobs[job_id]["partial"] = {}   # ← stores agent outputs as they arrive
-
+    jobs[job_id]["partial"] = {}
+ 
     graph = build_graph(checkpointing=False)
-
+ 
     initial_state = {
-        "idea":           request.idea,
-        "industry":       request.industry,
-        "target_market":  request.target_market,
-        "budget":         request.budget,
-        "stage":          request.stage,
+        "idea":              request.idea,
+        "industry":          request.industry,
+        "target_market":     request.target_market,
+        "budget":            request.budget,
+        "stage":             request.stage,
         "planner_output":    None,
         "research_output":   None,
         "competitor_output": None,
@@ -80,36 +138,35 @@ def run_pipeline_job(job_id: str, request: PitchRequest):
         "errors":            None,
         "completed_agents":  None,
     }
-
+ 
     try:
-        # .stream() yields {"node_name": state_snapshot} after each node
-        for chunk in graph.stream(initial_state, stream_mode="updates"):
-            node_name = list(chunk.keys())[0]
+        # astream() is the async version — required for parallel fan-in nodes to work correctly
+        async for chunk in graph.astream(initial_state, stream_mode="updates"):
+            node_name  = list(chunk.keys())[0]
             node_state = chunk[node_name]
-
-            # grab whatever output this agent just wrote
+ 
             output_key = f"{node_name}_output"
             if output_key in node_state and node_state[output_key] is not None:
                 output = node_state[output_key]
                 jobs[job_id]["partial"][output_key] = (
                     output.model_dump() if hasattr(output, "model_dump") else output
                 )
-
-            # track completed agents
+ 
             completed = node_state.get("completed_agents") or []
             jobs[job_id]["completed_agents"] = completed
-
-            # special case: report writes final_report_path not *_output
+ 
             if "final_report_path" in node_state:
                 jobs[job_id]["report_path"] = node_state["final_report_path"]
-
+ 
             print(f"[server] Agent done: {node_name}")
-
+ 
         jobs[job_id]["status"] = "done"
-
+ 
     except Exception as e:
+        import traceback
+        traceback.print_exc()   # <-- this will print the FULL error to terminal
         jobs[job_id].update({"status": "error", "errors": [str(e)]})
-
+ 
 
 
 @app.post("/api/analyze")
