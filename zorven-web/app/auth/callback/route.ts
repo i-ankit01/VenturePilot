@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       console.log("user id is ", userId);
 
       const { data: existingUser } = await supabase
-        .from("all_profiles")
+        .from("profiles")
         .select("*")
         .eq("id", userId)
         .limit(1)
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       if (!existingUser) {
         console.log("trying to insert");
         const { error: insertError } = await supabase
-          .from("all_profiles")
+          .from("profiles")
           .insert({
             id: userId,
             email: data.user.email,

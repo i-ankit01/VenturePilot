@@ -64,17 +64,17 @@ export async function signIn(formData: FormData) {
 
   const userId = data.user.id;
 
-  // check if user already exists if not then create an instance in all_profiles table also
+  // check if user already exists if not then create an instance in profiles table also
 
   const { data: existingUser } = await supabase
-    .from("all_profiles")
+    .from("profiles")
     .select("*")
     .eq("id", userId)
     .limit(1)
     .single();
 
   if(!existingUser){
-    const {error : insertError} = await supabase.from("all_profiles").insert({
+    const {error : insertError} = await supabase.from("profiles").insert({
       id: userId,
       email : data.user.email,
       full_name : data.user.user_metadata.name,
