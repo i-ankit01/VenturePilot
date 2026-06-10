@@ -93,18 +93,18 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
 
     # research → competitor + product (parallel fan-out)
     workflow.add_edge(RESEARCH, COMPETITOR)
-    workflow.add_edge(RESEARCH, PRODUCT)
+    workflow.add_edge(COMPETITOR, PRODUCT)
 
     # competitor + product → branding (fan-in — branding needs both)
-    workflow.add_edge(COMPETITOR, BRANDING)
+    # workflow.add_edge(COMPETITOR, BRANDING)
     workflow.add_edge(PRODUCT,    BRANDING)
 
     # branding → finance + gtm (parallel fan-out)
     workflow.add_edge(BRANDING, FINANCE)
-    workflow.add_edge(BRANDING, GTM)
+    workflow.add_edge(FINANCE, GTM)
 
     # finance + gtm → pitch (fan-in — pitch needs both)
-    workflow.add_edge(FINANCE, PITCH)
+    # workflow.add_edge(FINANCE, PITCH)
     workflow.add_edge(GTM,     PITCH)
 
     # pitch → report → END
@@ -150,13 +150,13 @@ def build_graph_with_error_handling() -> StateGraph:
 
     workflow.add_edge(PLANNER,    RESEARCH)
     workflow.add_edge(RESEARCH,   COMPETITOR)
-    workflow.add_edge(RESEARCH,   PRODUCT)
-    workflow.add_edge(COMPETITOR, BRANDING)
-    workflow.add_edge(PRODUCT,    BRANDING)
-    workflow.add_edge(BRANDING,   FINANCE)
-    workflow.add_edge(BRANDING,   GTM)
-    workflow.add_edge(FINANCE,    PITCH)
-    workflow.add_edge(GTM,        PITCH)
+    workflow.add_edge(COMPETITOR,   PRODUCT)
+    workflow.add_edge(PRODUCT, BRANDING)
+    workflow.add_edge(BRANDING,    FINANCE)
+    # workflow.add_edge(PRODUCT,   FINANCE)
+    workflow.add_edge(FINANCE,   GTM)
+    workflow.add_edge(GTM,    PITCH)
+    # workflow.add_edge(GTM,        PITCH)
     workflow.add_edge(PITCH,      REPORT)
     workflow.add_edge(REPORT,     END)
 
