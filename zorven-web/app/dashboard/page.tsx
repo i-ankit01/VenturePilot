@@ -13,6 +13,7 @@ import {
   BarChart3,
   Sparkles,
 } from "lucide-react";
+import SignOut from "@/components/auth/SignOut";
 
 // ─── Mock data (replace with real API fetch) ──────────────────────────────────
 type ProjectStatus = "completed" | "building" | "draft";
@@ -250,6 +251,7 @@ export default function DashboardPage() {
               New Project
             </Button>
           </Link>
+          <SignOut/>
         </div>
 
         {/* Stats */}

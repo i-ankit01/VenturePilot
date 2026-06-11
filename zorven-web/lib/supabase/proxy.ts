@@ -75,21 +75,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // FORCE onboarding if not completed
-  if (user && pathname !== "/onboarding") {
-    const { data: profile } = await supabase
-      .from("all_profiles")
-      .select("onboarding_completed")
-      .eq("id", user.sub)
-      .single();
-
-    if (!profile?.onboarding_completed) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/onboarding";
-      return NextResponse.redirect(url);
-    }
-  }
-
   // Logged in → block auth pages
   if (user && publicRoutes.includes(pathname)) {
     const url = request.nextUrl.clone();

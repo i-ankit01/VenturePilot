@@ -28,7 +28,7 @@ export default function SignIn() {
         toast.success("Welcome back!", {
           description: "You've successfully signed in.",
         });
-        router.push("/onboarding");
+        router.push("/dashboard");
       } else {
         toast.error("Sign in failed", {
           description: result.status || "Invalid credentials. Please try again.",

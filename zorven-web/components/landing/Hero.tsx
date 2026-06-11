@@ -32,7 +32,7 @@ export default function Hero() {
 
       <div className="flex items-center gap-4 relative z-10 mb-16">
         <Link
-          href={"/dashboard"}
+          href={"/signin"}
           type="button"
           className="rounded-lg h-9 w-32 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-medium"
           aria-label="Get started with the template"
