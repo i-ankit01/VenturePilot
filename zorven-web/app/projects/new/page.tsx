@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createProject } from "@/actions/projects";
 import {
   Zap,
   ArrowRight,
@@ -21,22 +22,32 @@ import { cn } from "@/lib/utils";
 
 // ─── Static options ───────────────────────────────────────────────────────────
 const INDUSTRIES = [
-  "SaaS", "FinTech", "HealthTech", "EdTech", "E-Commerce", "Logistics",
-  "LegalTech", "CleanTech", "Consumer", "Developer Tools", "Media", "Other",
+  "SaaS",
+  "FinTech",
+  "HealthTech",
+  "EdTech",
+  "E-Commerce",
+  "Logistics",
+  "LegalTech",
+  "CleanTech",
+  "Consumer",
+  "Developer Tools",
+  "Media",
+  "Other",
 ];
 
 const STAGES = [
-  { value: "idea",        label: "Idea — just a concept" },
-  { value: "mvp",         label: "MVP — building or built" },
-  { value: "early",       label: "Early — first customers" },
-  { value: "growth",      label: "Growth — scaling revenue" },
+  { value: "idea", label: "Idea — just a concept" },
+  { value: "mvp", label: "MVP — building or built" },
+  { value: "early", label: "Early — first customers" },
+  { value: "growth", label: "Growth — scaling revenue" },
 ];
 
 const BUDGETS = [
   { value: "bootstrapped", label: "Bootstrapped" },
-  { value: "pre-seed",     label: "Pre-Seed (<$500K)" },
-  { value: "seed",         label: "Seed ($500K–$2M)" },
-  { value: "series-a",     label: "Series A ($2M+)" },
+  { value: "pre-seed", label: "Pre-Seed (<$500K)" },
+  { value: "seed", label: "Seed ($500K–$2M)" },
+  { value: "series-a", label: "Series A ($2M+)" },
 ];
 
 const SUGGESTIONS = [
@@ -79,41 +90,47 @@ function ThinkingDots() {
 
 // ─── Agent launch sequence ────────────────────────────────────────────────────
 const AGENT_SEQUENCE = [
-  { key: "planner",    label: "Planner",    desc: "Structuring your idea" },
-  { key: "research",   label: "Research",   desc: "Scanning the market" },
+  { key: "planner", label: "Planner", desc: "Structuring your idea" },
+  { key: "research", label: "Research", desc: "Scanning the market" },
   { key: "competitor", label: "Competitor", desc: "Mapping the landscape" },
-  { key: "product",    label: "Product",    desc: "Defining features & pricing" },
-  { key: "branding",   label: "Branding",   desc: "Building your brand identity" },
-  { key: "finance",    label: "Finance",    desc: "Modeling 12-month projections" },
-  { key: "gtm",        label: "GTM",        desc: "Crafting go-to-market strategy" },
-  { key: "pitch",      label: "Pitch",      desc: "Writing your investor deck" },
+  { key: "product", label: "Product", desc: "Defining features & pricing" },
+  { key: "branding", label: "Branding", desc: "Building your brand identity" },
+  { key: "finance", label: "Finance", desc: "Modeling 12-month projections" },
+  { key: "gtm", label: "GTM", desc: "Crafting go-to-market strategy" },
+  { key: "pitch", label: "Pitch", desc: "Writing your investor deck" },
 ];
 
 function LaunchSequence({ activeIndex }: { activeIndex: number }) {
   return (
     <div className="mt-6 w-full max-w-sm space-y-1.5">
       {AGENT_SEQUENCE.map((agent, i) => {
-        const isDone    = i < activeIndex;
-        const isActive  = i === activeIndex;
+        const isDone = i < activeIndex;
+        const isActive = i === activeIndex;
         const isPending = i > activeIndex;
         return (
           <div
             key={agent.key}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 transition-all duration-300",
-              isActive  && "bg-primary/10 border border-primary/20",
-              isDone    && "opacity-50",
+              isActive && "bg-primary/10 border border-primary/20",
+              isDone && "opacity-50",
               isPending && "opacity-20",
             )}
           >
-            <div className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full transition-all",
-              isDone    && "bg-emerald-400",
-              isActive  && "bg-primary shadow-[0_0_6px_var(--color-primary)] animate-pulse",
-              isPending && "bg-muted-foreground/30",
-            )} />
+            <div
+              className={cn(
+                "h-1.5 w-1.5 shrink-0 rounded-full transition-all",
+                isDone && "bg-emerald-400",
+                isActive &&
+                  "bg-primary shadow-[0_0_6px_var(--color-primary)] animate-pulse",
+                isPending && "bg-muted-foreground/30",
+              )}
+            />
             <span
-              className={cn("text-[11px] font-semibold tracking-wide", isActive ? "text-primary" : "text-muted-foreground")}
+              className={cn(
+                "text-[11px] font-semibold tracking-wide",
+                isActive ? "text-primary" : "text-muted-foreground",
+              )}
               style={{ fontFamily: "'DM Mono', monospace" }}
             >
               {agent.label}
@@ -130,7 +147,10 @@ function LaunchSequence({ activeIndex }: { activeIndex: number }) {
 
 // ─── Small select wrapper ─────────────────────────────────────────────────────
 function NativeSelect({
-  value, onChange, options, placeholder,
+  value,
+  onChange,
+  options,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -150,9 +170,13 @@ function NativeSelect({
         )}
         style={{ fontFamily: "'DM Mono', monospace" }}
       >
-        <option value="" disabled>{placeholder}</option>
+        <option value="" disabled>
+          {placeholder}
+        </option>
         {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </select>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
@@ -162,19 +186,23 @@ function NativeSelect({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NewProjectPage() {
-  const router      = useRouter();
+  const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [idea,          setIdea]         = useState("");
-  const [industry,      setIndustry]     = useState("");
-  const [targetMarket,  setTargetMarket] = useState("");
-  const [budget,        setBudget]       = useState("bootstrapped");
-  const [stage,         setStage]        = useState("idea");
-  const [phase,         setPhase]        = useState<"input" | "launching" | "redirecting">("input");
-  const [error,         setError]        = useState<string | null>(null);
-  const [launchStep,    setLaunchStep]   = useState(0);
+  const [idea, setIdea] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [targetMarket, setTargetMarket] = useState("");
+  const [budget, setBudget] = useState("bootstrapped");
+  const [stage, setStage] = useState("idea");
+  const [phase, setPhase] = useState<"input" | "launching" | "redirecting">(
+    "input",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [launchStep, setLaunchStep] = useState(0);
 
-  useEffect(() => { textareaRef.current?.focus(); }, []);
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setIdea(e.target.value);
@@ -199,12 +227,16 @@ export default function NewProjectPage() {
 
     const stepTimer = setInterval(() => {
       setLaunchStep((prev) => {
-        if (prev >= AGENT_SEQUENCE.length - 1) { clearInterval(stepTimer); return prev; }
+        if (prev >= AGENT_SEQUENCE.length - 1) {
+          clearInterval(stepTimer);
+          return prev;
+        }
         return prev + 1;
       });
     }, 280);
 
     try {
+      // 1. Start the backend pipeline
       const { job_id } = await startPipeline({
         idea: idea.trim(),
         industry,
@@ -212,18 +244,35 @@ export default function NewProjectPage() {
         budget,
         stage,
       });
+
+      // 2. Save to Supabase, get our own project id
+      const projectId = await createProject({
+        idea: idea.trim(),
+        industry,
+        target_market: targetMarket.trim(),
+        budget,
+        stage,
+        job_id,
+      });
+
       await new Promise((r) => setTimeout(r, 2500));
       clearInterval(stepTimer);
       setPhase("redirecting");
-      router.push(`/projects/${job_id}`);
+
+      // 3. Redirect using Supabase project id
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       clearInterval(stepTimer);
       setPhase("input");
-      setError(err instanceof Error ? err.message : "Failed to start pipeline. Is the backend running?");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to start pipeline. Is the backend running?",
+      );
     }
   };
 
-  const applySuggestion = (s: typeof SUGGESTIONS[0]) => {
+  const applySuggestion = (s: (typeof SUGGESTIONS)[0]) => {
     setIdea(s.idea);
     setIndustry(s.industry);
     setTargetMarket(s.target_market);
@@ -235,11 +284,9 @@ export default function NewProjectPage() {
   return (
     <AppShell>
       <div className="flex min-h-full flex-col items-center justify-center px-6 py-14">
-
         {/* ── Input phase ── */}
         {phase === "input" && (
           <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-
             {/* Header */}
             <div className="mb-8 text-center">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5">
@@ -258,13 +305,13 @@ export default function NewProjectPage() {
                 What are you building?
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Tell us your idea, industry, and who you're building for — agents handle the rest.
+                Tell us your idea, industry, and who you're building for —
+                agents handle the rest.
               </p>
             </div>
 
             {/* Main card */}
             <div className="rounded-xl border border-border/60 bg-card shadow-[0_4px_32px_rgba(0,0,0,0.12)]">
-
               {/* Idea textarea */}
               <div className="relative transition-all focus-within:border-primary/40">
                 <Textarea
@@ -283,20 +330,29 @@ export default function NewProjectPage() {
               <div className="grid grid-cols-2 gap-3 border-b border-border/40 px-5 py-4">
                 {/* Industry */}
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <Label
+                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
                     Industry <span className="text-destructive">*</span>
                   </Label>
                   <NativeSelect
                     value={industry}
                     onChange={setIndustry}
                     placeholder="Select industry"
-                    options={INDUSTRIES.map((ind) => ({ value: ind, label: ind }))}
+                    options={INDUSTRIES.map((ind) => ({
+                      value: ind,
+                      label: ind,
+                    }))}
                   />
                 </div>
 
                 {/* Target market */}
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <Label
+                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
                     Target Market <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -310,7 +366,10 @@ export default function NewProjectPage() {
 
                 {/* Stage */}
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <Label
+                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
                     Stage
                   </Label>
                   <NativeSelect
@@ -323,7 +382,10 @@ export default function NewProjectPage() {
 
                 {/* Budget */}
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <Label
+                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
+                    style={{ fontFamily: "'DM Mono', monospace" }}
+                  >
                     Budget
                   </Label>
                   <NativeSelect
@@ -341,8 +403,8 @@ export default function NewProjectPage() {
                   className="text-[11px] text-muted-foreground/40"
                   style={{ fontFamily: "'DM Mono', monospace" }}
                 >
-                  <CornerDownLeft className="mr-1 inline h-3 w-3" />
-                  ⌘ + Enter to build
+                  <CornerDownLeft className="mr-1 inline h-3 w-3" />⌘ + Enter to
+                  build
                 </span>
                 <Button
                   onClick={handleBuild}
@@ -383,7 +445,10 @@ export default function NewProjectPage() {
                     onClick={() => applySuggestion(s)}
                     className="group rounded-lg border border-border/40 bg-card/50 px-4 py-3 text-left text-[12px] leading-relaxed text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
                   >
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary/60" style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <span
+                      className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary/60"
+                      style={{ fontFamily: "'DM Mono', monospace" }}
+                    >
                       {s.industry} · {s.target_market}
                     </span>
                     {s.idea}
@@ -408,7 +473,9 @@ export default function NewProjectPage() {
               className="mb-1 text-lg font-bold text-foreground"
               style={{ fontFamily: "'DM Mono', monospace" }}
             >
-              {phase === "redirecting" ? "Taking you there…" : "Launching agents"}
+              {phase === "redirecting"
+                ? "Taking you there…"
+                : "Launching agents"}
             </h2>
             <p className="mb-2 text-sm text-muted-foreground">
               {phase === "redirecting"
@@ -417,13 +484,22 @@ export default function NewProjectPage() {
             </p>
 
             <div className="mb-4 flex gap-2">
-              <span className="rounded-sm border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] text-primary" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span
+                className="rounded-sm border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
                 {industry}
               </span>
-              <span className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span
+                className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
                 {stage}
               </span>
-              <span className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span
+                className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
                 {budget}
               </span>
             </div>

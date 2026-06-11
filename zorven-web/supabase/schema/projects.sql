@@ -1,4 +1,4 @@
-create type project_status as enum ('pending', 'running', 'done', 'error');
+create type project_status as enum ('pending', 'building', 'completed', 'error');
 
 create table public.projects (
   id           uuid primary key default gen_random_uuid(),
