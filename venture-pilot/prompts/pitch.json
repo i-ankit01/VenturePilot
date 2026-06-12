@@ -1,0 +1,245 @@
+{
+  "deck_title": "Craftegra — Investor Pitch Deck 2025",
+  "slide_09_gtm": {
+    "phase_1": "Phase 1: Engage 100 users via direct outreach in freelancer groups on LinkedIn and WhatsApp.",
+    "phase_2": "Phase 2: Utilize content marketing and referrals to grow to 1,000 users, showcasing success stories and testimonials.",
+    "phase_3": "Phase 3: Scale marketing through partnerships and advanced campaigns, targeting 10,000+ freelancers.",
+    "headline": "Community-first approach to growth.",
+    "north_star": "North Star: Contracts paid on time — reflecting user trust and satisfaction in using Craftegra.",
+    "slide_type": "Go-To-Market",
+    "slide_number": 9,
+    "presenter_note": "This phased approach emphasizes building community and delivering real value to users, ensuring that they advocate for Craftegra.",
+    "primary_channels": [
+      "Community outreach and engagement.",
+      "Content marketing tailored to freelancers.",
+      "Targeted social media strategies."
+    ]
+  },
+  "slide_12_ask": {
+    "headline": "Join us in reshaping the freelance contract landscape.",
+    "slide_type": "The Ask",
+    "closing_line": "The freelance economy represents a multi-billion dollar market, and with Craftegra, we are here to empower every freelancer to secure their contracts confidently. Let's craft this future together.",
+    "raise_amount": "",
+    "slide_number": 12,
+    "use_of_funds": [
+      "Product development (60%): $60,000",
+      "Marketing & user acquisition (30%): $30,000",
+      "Operational costs (10%): $10,000",
+      "Legal & compliance: internal resources"
+    ],
+    "presenter_note": "Thank you for your time! The potential impact we can create with Craftegra is immense — every freelancer deserves to work with confidence. I hope you will join us on this mission!",
+    "milestones_unlocked": [
+      "MVP refinement based on user feedback",
+      "Increase user acquisition efforts",
+      "Expand marketing initiatives"
+    ]
+  },
+  "total_slides": 12,
+  "slide_10_team": {
+    "why_us": "Our team uniquely understands the freelance space. The founder has personally navigated the pitfalls of contract management, and our developer previously worked at a leading legal firm.",
+    "headline": "Built by freelancers, for freelancers.",
+    "slide_type": "Team",
+    "slide_number": 10,
+    "presenter_note": "It’s our lived experience that positions us to truly empathize with our users and innovate effectively for their needs.",
+    "key_hires_needed": [
+      "Content Marketer with freelancer experience",
+      "Full-Stack Developer for product enhancements",
+      "Customer Success Expert to improve retention"
+    ],
+    "advisors_or_supporters": "We're looking to connect with advisors who are experienced in LegalTech and customer engagement within freelance communities."
+  },
+  "slide_01_cover": {
+    "tagline": "Craft your contracts right",
+    "one_liner": "Meet Craftegra — the AI-driven contract tool for freelancers. Whether you need to draft or review, we simplify the complexities of contracts into tailored insights, giving you the confidence to protect your freelance work. Perfecting contracts has never been easier!",
+    "slide_type": "Cover",
+    "slide_number": 1,
+    "startup_name": "Craftegra",
+    "presenter_note": "Welcome everyone! I’m thrilled to introduce you to Craftegra, where we empower freelancers and independent consultants to craft their contracts confidently. Let's dive right into the pressing problems we're solving."
+  },
+  "email_follow_up": "Follow-Up: Thank You for Your Time! \nDear [Investor's Name],\n\nI want to thank you for taking the time to hear our pitch on Craftegra today. We are excited about the opportunity to empower freelancers through our innovative contract management tool. As discussed, we're looking to make a significant impact in this space.\n\nPlease find attached our pitch deck for your review, and let us know if you have any questions or would like to dive deeper into any aspects. We're keen on building a partnership that aligns with our shared vision of supporting freelancers.\n\nBest,\n[Your Name], Founder of Craftegra",
+  "slide_05_market": {
+    "sam": "Within this market, freelancers represent an urgent and growing service gap, providing a significant opportunity for targeted solutions.",
+    "som": "Our Year 1 goal is to capture 1,500 paying freelancers, a realistic target given our engagement strategy.",
+    "tam": "The global LegalTech market is estimated to grow from $26.5B in 2024 to $29.2B in 2025, with contract management as a key growth driver.",
+    "headline": "A $26.5 billion legal market, ripe for disruption.",
+    "slide_type": "Market Size",
+    "slide_number": 5,
+    "presenter_note": "With a market of this scale, now is the perfect time for Craftegra. We're strategically positioned to meet these growing needs!",
+    "market_tailwinds": [
+      "Freelance economy expected to grow 20% YOY through 2026.",
+      "Integration of AI is transforming how contracts are managed, making tools like Craftegra crucial.",
+      "Increased investment in affordable contract solutions is rapidly occurring, meeting freelancers' unmet needs."
+    ]
+  },
+  "slide_02_problem": {
+    "headline": "Freelancers struggle with complex contract management.",
+    "slide_type": "Problem",
+    "pain_points": [
+      {
+        "headline": "Time-consuming contract drafting processes.",
+        "supporting": "Freelancers typically spend multiple hours creating contracts, often from scratch, creating frustration and inefficiency."
+      },
+      {
+        "headline": "Inconsistencies lead to legal vulnerabilities.",
+        "supporting": "One in three freelancers report unfavorable terms due to manual handling and a lack of legal guidance."
+      },
+      {
+        "headline": "High costs of legal consultations.",
+        "supporting": "Freelancers often face hourly rates upwards of $200, creating barriers to secure legal advice."
+      }
+    ],
+    "slide_number": 2,
+    "emotional_hook": "Every freelancer knows the fear of sending a contract that doesn't protect them. At Craftegra, we're changing that story.",
+    "presenter_note": "These challenges lead to stress and missed opportunities for freelancers. It’s time for a solution that understands their unique needs."
+  },
+  "slide_04_product": {
+    "headline": "Crafting contracts made easy with Craftegra.",
+    "demo_flow": "Step 1: Input project details and client information → Step 2: Generate a personalized contract → Step 3: Access legal insights and send via Craftegra.",
+    "slide_type": "Product",
+    "slide_number": 4,
+    "core_features": [
+      "AI-Powered Contract Drafting: Tailored contracts generated in seconds.",
+      "Contextual Legal Insights: Instant legal help based on freelancer needs.",
+      "Template Library: Customizable contract templates for various project types.",
+      "Revision Tracker: Easy change tracking and identification of inconsistencies."
+    ],
+    "presenter_note": "Let’s take a quick look at how effortlessly users can draft with Craftegra. This is what a streamlined contract process looks like!",
+    "tech_differentiator": "Built using the OpenAI API, ensuring high-quality, context-aware suggestions tailored for freelancers."
+  },
+  "hardest_questions": [
+    "Q: How do you plan to differentiate when competition increases? → A: Our focus on freelancers uniquely positions us to evolve our features in synergy with their specific needs, while maintaining a community-first approach.",
+    "Q: Can your projections sustain scrutiny? → A: Yes, we project strong user growth based on proven conversion tactics from organic channels, and LTV:CAC ratios indicate solid financial health.",
+    "Q: What are the biggest risks you foresee? → A: An initial dependency on AI accuracy poses a risk. We will focus heavily on user feedback to refine product quality while ensuring a reliable service.",
+    "Q: How will you handle churn as you grow? → A: By prioritizing customer success initiatives and maintaining ongoing engagement post-signup, we aim to foster user loyalty and lower churn.",
+    "Q: Why choose a subscription model over one-time fees? → A: A subscription model provides us with predictable revenue and allows for regular updates and personalized support crucial for ongoing user satisfaction."
+  ],
+  "slide_03_solution": {
+    "headline": "Craftegra: Instant contracts, tailored legal insights.",
+    "aha_moment": "Imagine sending a contract confidently, knowing you've got tailored insights backing you up!",
+    "slide_type": "Solution",
+    "slide_number": 3,
+    "presenter_note": "Craftegra is built for freelancers. By addressing their specific needs through AI and affordability, we are reshaping contract management.",
+    "solution_bullets": [
+      {
+        "headline": "AI-Powered Contract Drafting.",
+        "supporting": "Generates personalized contracts instantly, saving hours of time."
+      },
+      {
+        "headline": "Contextual Legal Insights.",
+        "supporting": "Offers advice specific to freelancers' unique situations, enhancing contract security."
+      },
+      {
+        "headline": "Affordable Pricing Model.",
+        "supporting": "Starting at $19/month, empowering freelancers without breaking the bank."
+      }
+    ]
+  },
+  "slide_06_business": {
+    "headline": "Subscription model tailored for freelancers.",
+    "slide_type": "Business Model",
+    "slide_number": 6,
+    "pricing_tiers": [
+      "Free — up to 2 contracts/month (acquisition)",
+      "Pro $19/month — unlimited contracts + insights + templates",
+      "Business $49/month — team access and enhanced features"
+    ],
+    "presenter_note": "This model allows us to grow sustainably while providing consistent value to our users. Note the strong LTV:CAC ratio reflecting our efficient growth strategy!",
+    "unit_economics": ["ARPU: $28/month", "LTV:CAC = 19:1", "Payback: 1 month"],
+    "model_description": "Craftegra operates on a subscription basis, enabling us to provide continuous updates and tailored support for our users. Our model facilitates gradual scaling as we attract more paying users."
+  },
+  "slide_07_traction": {
+    "headline": "Strong early traction: 150 paid users and counting!",
+    "slide_type": "Traction & Validation",
+    "slide_number": 7,
+    "presenter_note": "We're experiencing gratifying early traction. The feedback validates our vital market fit, and we're excited for future growth!",
+    "next_milestones": [
+      "Hit 1,000 paying users by Month 6",
+      "Expand template library based on user requests",
+      "Launch partnerships with freelancer service platforms"
+    ],
+    "traction_points": [
+      {
+        "headline": "MVP launched with positive user feedback within the first month.",
+        "supporting": "Our rollout resulted in 150 paying users from organic growth."
+      },
+      {
+        "headline": "30% month-over-month growth in user signups since launch.",
+        "supporting": "Well-received feedback and engagement from early adopters are fueling this momentum."
+      },
+      {
+        "headline": "Positive user NPS of 85+, indicating high satisfaction.",
+        "supporting": "Freelancers are benefitting from tailored advice and rapid contract creation."
+      }
+    ],
+    "validation_quote": "\"Craftegra transformed my approach to contracts. It's like having a legal expert in my corner!\" — Alex, Freelance Designer."
+  },
+  "slide_11_financials": {
+    "headline": "Path to $34.2K ARR in Year 1 — breakeven at Month 9.",
+    "snapshot": {
+      "runway": "4 months,",
+      "ltv_cac": "19:1",
+      "arr_month_12": "$34,200",
+      "gross_margin": "75%",
+      "mrr_month_12": "$2,850",
+      "raise_amount": "Fundraising NOT required",
+      "break_even_month": "Month 9",
+      "paid_users_month_12": "150"
+    },
+    "slide_type": "Financials",
+    "slide_number": 11,
+    "presenter_note": "Our financial projections showcase a strong growth trajectory. We are seeking to optimize our model while remaining focused on cash flow.",
+    "key_assumptions": [
+      "8% free-to-paid conversion",
+      "3% monthly churn",
+      "$500 CAC through social media marketing"
+    ],
+    "projection_narrative": "We are on a strategic path with a clear focus on sustainable growth. By harnessing organic acquisition and carefully monitoring our cash flows, we expect to break even by Month 9, with $34,200 ARR projected by Year 1's end."
+  },
+  "recommended_duration": "12 minutes — 1 minute per slide, 5 min Q&A",
+  "slide_08_competition": {
+    "headline": "The unique Craftegra advantage over competitors.",
+    "our_moat": "Craftegra’s integration of AI with a specific focus on freelancers creates a value proposition unmatched in the market.",
+    "slide_type": "Competition",
+    "slide_number": 8,
+    "presenter_note": "Our research suggests that while competitors have strong features, none cater specifically to freelancers like Craftegra does. This is where our moat lies!",
+    "competitor_matrix": [
+      {
+        "is_us": false,
+        "gst_compliant": false,
+        "affordable_inr": false,
+        "auto_reminders": false,
+        "competitor_name": "DocuSign",
+        "whatsapp_native": false,
+        "freelancer_focused": false
+      },
+      {
+        "is_us": false,
+        "gst_compliant": false,
+        "affordable_inr": true,
+        "auto_reminders": false,
+        "competitor_name": "ContractSafe",
+        "whatsapp_native": false,
+        "freelancer_focused": false
+      },
+      {
+        "is_us": false,
+        "gst_compliant": false,
+        "affordable_inr": false,
+        "auto_reminders": true,
+        "competitor_name": "goHeather",
+        "whatsapp_native": false,
+        "freelancer_focused": false
+      },
+      {
+        "is_us": true,
+        "gst_compliant": true,
+        "affordable_inr": true,
+        "auto_reminders": true,
+        "competitor_name": "Us",
+        "whatsapp_native": true,
+        "freelancer_focused": true
+      }
+    ]
+  },
+  "pitch_narrative_summary": "Craftegra addresses the pressing needs of freelancers and independent consultants for accessible, tailored legal insights concerning contract management. With a lucrative and rapidly growing market, we offer an AI-driven solution that simplifies contract drafting while empowering users with essential legal knowledge. Our dedicated team, leveraging personal experiences and technical know-how, is uniquely positioned to capture this underserved segment. We seek to refine our product and scale our user acquisition to serve a billion-dollar market, where every freelancer deserves to craft their contracts right."
+}

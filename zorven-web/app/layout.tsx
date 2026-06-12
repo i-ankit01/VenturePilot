@@ -3,6 +3,19 @@ import { Geist, Geist_Mono, Poppins, Oxanium } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { DM_Mono } from "next/font/google";
+
+import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
+
+   const spaceGrotesk = Space_Grotesk({
+     subsets: ["latin"],
+     variable: "--font-space-grotesk",
+   });
+   const plusJakarta = Plus_Jakarta_Sans({
+     subsets: ["latin"],
+     variable: "--font-plus-jakarta",
+   });
+
+   
 const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 const oxanium = Oxanium({subsets:['latin'],variable:'--font-sans'});
