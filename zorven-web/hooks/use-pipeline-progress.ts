@@ -8,19 +8,18 @@ const OUTPUT_KEYS = [
   "planner_output", "research_output", "competitor_output", "product_output",
   "branding_output", "finance_output", "gtm_output", "pitch_output",
 ] as const;
-
 type OutputKey = typeof OUTPUT_KEYS[number];
 
 export function usePipelineProgress(projectId: string | null) {
-  const [jobId, setJobId]   = useState<string | null>(null);
+  const [jobId, setJobId]               = useState<string | null>(null);
   const [projectTitle, setProjectTitle] = useState<string>("");
-  const [data, setData]     = useState<PartialResult | null>(null);
-  const [status, setStatus] = useState<PipelineStatus>("idle");
-  const [error, setError]   = useState<string | null>(null);
-  const intervalRef         = useRef<ReturnType<typeof setInterval> | null>(null);
-  const savedRef            = useRef(false);
+  const [data, setData]                 = useState<PartialResult | null>(null);
+  const [status, setStatus]             = useState<PipelineStatus>("idle");
+  const [error, setError]               = useState<string | null>(null);
+  const intervalRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const savedRef                        = useRef(false);
 
-  // Step 1: fetch project row from Supabase to get job_id
+  // ── Step 1: fetch project row from Supabase ───────────────────────────────
   useEffect(() => {
     if (!projectId) return;
     const supabase = createClient();
@@ -30,24 +29,50 @@ export function usePipelineProgress(projectId: string | null) {
       .select("job_id, title, status")
       .eq("id", projectId)
       .single()
-      .then(({ data: project, error }) => {
-        if (error || !project) {
+      .then(async ({ data: project, error: projError }) => {
+        if (projError || !project) {
           setError("Project not found");
           return;
         }
-        setJobId(project.job_id);
-        setProjectTitle(project.title);
 
-        // If already done in DB, mark as done immediately
+        setJobId(project.job_id);
+        setProjectTitle(project.title ?? project.job_id);
+
+        // ── Already completed: load saved results from DB, skip polling ──
         if (project.status === "completed") {
+          const { data: rows, error: rowsError } = await supabase
+            .from("analysis_results")
+            .select("agent, output")
+            .eq("project_id", projectId);
+
+          if (rowsError || !rows || rows.length === 0) {
+            // DB has no saved rows — fall through to polling
+            setJobId(project.job_id);
+            return;
+          }
+
+          // Reconstruct PartialResult from rows
+          const restored: Partial<PartialResult> = {};
+          for (const row of rows) {
+            const key = `${row.agent}_output` as OutputKey;
+            if (OUTPUT_KEYS.includes(key)) {
+              (restored as any)[key] = row.output;
+            }
+          }
+
+          setData(restored as PartialResult);
           setStatus("done");
+          savedRef.current = true; // don't re-save what we just loaded
+          return;
         }
+
+        // Not completed — polling will start via Step 2 effect below
       });
   }, [projectId]);
 
-  // Step 2: poll backend using job_id
+  // ── Step 2: poll backend using job_id (only when not already done) ────────
   useEffect(() => {
-    if (!jobId || status === "done") return;
+    if (!jobId || status === "done" || status === "error") return;
 
     setStatus("running");
 
@@ -70,9 +95,9 @@ export function usePipelineProgress(projectId: string | null) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [jobId]);
+  }, [jobId]); // intentionally only jobId — status change must not restart polling
 
-  // Step 3: when done, save results to Supabase
+  // ── Step 3: when done, save results to Supabase ───────────────────────────
   useEffect(() => {
     if (status !== "done" || !data || !projectId || savedRef.current) return;
     savedRef.current = true;
@@ -98,12 +123,10 @@ export function usePipelineProgress(projectId: string | null) {
         output: data[outputKey],
       }));
 
-    // Upsert in case of re-runs
     supabase
       .from("analysis_results")
       .upsert(inserts, { onConflict: "project_id,agent" })
       .then(() => {
-        // Mark project as completed
         supabase
           .from("projects")
           .update({ status: "completed" })
@@ -111,7 +134,7 @@ export function usePipelineProgress(projectId: string | null) {
       });
   }, [status, data, projectId]);
 
-  // Which output keys have data — matches what workspace page checks
+  // ── Derived: which output keys have data ──────────────────────────────────
   const completedAgents: string[] = data
     ? OUTPUT_KEYS.filter((k) => data[k] != null)
     : [];
