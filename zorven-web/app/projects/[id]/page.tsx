@@ -26,6 +26,8 @@ import {
   Lock,
   AlertCircle,
 } from "lucide-react";
+import { IconFileTypePpt } from "@tabler/icons-react";
+import { ReportPanel } from "@/components/workspace/panels/report-panel";
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -65,6 +67,12 @@ const TABS = [
     key: "pitch",
     label: "Pitch",
     icon: Presentation,
+    outputKey: "pitch_output",
+  },
+  {
+    key: "report",
+    label: "Report",
+    icon: IconFileTypePpt,
     outputKey: "pitch_output",
   },
 ] as const;
@@ -137,6 +145,7 @@ export default function WorkspacePage({ params }: PageProps) {
   const { id: jobId } = use(params);
   // update destructure
   const { data, status, error, completedAgents, projectTitle } = usePipelineProgress(jobId);
+  // console.log(data,status,error,completedAgents)
   const [activeTab, setActiveTab] = useState<TabKey>("planner");
 
   const isRunning = status === "running" || status === "idle";
@@ -185,6 +194,8 @@ export default function WorkspacePage({ params }: PageProps) {
         return <GtmPanel data={data!.gtm_output!} />;
       case "pitch":
         return <PitchPanel data={data!.pitch_output!} />;
+      case "report":
+        return <ReportPanel data={data!.pitch_output!} />;
     }
   }
 

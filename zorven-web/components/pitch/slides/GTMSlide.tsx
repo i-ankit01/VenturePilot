@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/slides/GTMSlide.tsx
 
 import { GTMSlide as GTMSlideData } from "@/types/pitch";

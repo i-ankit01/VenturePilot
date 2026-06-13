@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/slides/TeamSlide.tsx
 
 import { TeamSlide as TeamSlideData } from "@/types/pitch";

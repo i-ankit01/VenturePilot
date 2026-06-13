@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/slides/CoverSlide.tsx
 
 import { CoverSlide as CoverSlideData } from "@/types/pitch";

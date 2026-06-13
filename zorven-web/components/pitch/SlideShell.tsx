@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/SlideShell.tsx
 // The shared 1280×720 frame every slide renders inside.
 // Also exports the design tokens used across all slide components.

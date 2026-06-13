@@ -28,8 +28,8 @@ export interface FinancialSnapshot {
 }
 
 export interface CoverSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   startup_name: string;
   tagline: string;
   one_liner: string;
@@ -37,8 +37,8 @@ export interface CoverSlide {
 }
 
 export interface ProblemSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   pain_points: BulletPoint[];
   emotional_hook: string;
@@ -46,8 +46,8 @@ export interface ProblemSlide {
 }
 
 export interface SolutionSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   solution_bullets: BulletPoint[];
   aha_moment: string;
@@ -55,8 +55,8 @@ export interface SolutionSlide {
 }
 
 export interface ProductSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   core_features: string[];
   demo_flow: string;
@@ -65,8 +65,8 @@ export interface ProductSlide {
 }
 
 export interface MarketSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   tam: string;
   sam: string;
@@ -76,8 +76,8 @@ export interface MarketSlide {
 }
 
 export interface BusinessModelSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   model_description: string;
   pricing_tiers: string[];
@@ -86,8 +86,8 @@ export interface BusinessModelSlide {
 }
 
 export interface TractionSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   traction_points: BulletPoint[];
   validation_quote: string;
@@ -96,8 +96,8 @@ export interface TractionSlide {
 }
 
 export interface CompetitionSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   competitor_matrix: CompetitorMatrixRow[];
   our_moat: string;
@@ -105,8 +105,8 @@ export interface CompetitionSlide {
 }
 
 export interface GTMSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   phase_1: string;
   phase_2: string;
@@ -117,8 +117,8 @@ export interface GTMSlide {
 }
 
 export interface TeamSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   why_us: string;
   key_hires_needed: string[];
@@ -127,8 +127,8 @@ export interface TeamSlide {
 }
 
 export interface FinancialsSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   snapshot: FinancialSnapshot;
   projection_narrative: string;
@@ -137,8 +137,8 @@ export interface FinancialsSlide {
 }
 
 export interface AskSlide {
-  slide_number: number;
-  slide_type: string;
+  slide_number?: number;
+  slide_type?: string;
   headline: string;
   raise_amount: string;
   use_of_funds: string[];

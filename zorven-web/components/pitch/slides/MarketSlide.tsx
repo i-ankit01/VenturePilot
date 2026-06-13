@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/slides/MarketSlide.tsx
 
 import { MarketSlide as MarketSlideData } from "@/types/pitch";

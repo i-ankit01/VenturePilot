@@ -1,4 +1,4 @@
-"use client";
+
 // components/pitch/SlideRenderer.tsx
 
 import { PitchOutput } from "@/types/pitch";

@@ -1,4 +1,5 @@
-"use client";
+
+
 // components/pitch/slides/TractionSlide.tsx
 
 import { TractionSlide as TractionSlideData } from "@/types/pitch";

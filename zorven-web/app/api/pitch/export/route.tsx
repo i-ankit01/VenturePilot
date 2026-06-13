@@ -1,4 +1,4 @@
-// app/api/pitch/export/route.ts
+// app/api/pitch/export/route.tsx
 import { NextRequest, NextResponse } from "next/server";
 import { chromium } from "playwright";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -16,17 +16,6 @@ import { TeamSlide } from "@/components/pitch/slides/TeamSlide";
 import { FinancialsSlide } from "@/components/pitch/slides/FinancialsSlide";
 import { AskSlide } from "@/components/pitch/slides/AskSlide";
 
-// ── Fetch the pitch output for a project ───────────────────────────────────
-// Replace this with your actual data-fetching (Supabase, your FastAPI backend, etc.)
-async function getPitchOutput(projectId: string): Promise<PitchOutput | null> {
-  const apiBase = process.env.AGENT_API_URL ?? "http://localhost:8000";
-  const res = await fetch(`${apiBase}/projects/${projectId}/result`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.pitch_output ?? null;
-}
 
 function renderSlideHTML(data: PitchOutput): string {
   const slides = [
@@ -74,15 +63,12 @@ function renderSlideHTML(data: PitchOutput): string {
 </html>`;
 }
 
-export async function GET(req: NextRequest) {
-  const projectId = req.nextUrl.searchParams.get("projectId");
-  if (!projectId) {
-    return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
-  }
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const pitchOutput: PitchOutput | undefined = body?.pitch_output;
 
-  const pitchOutput = await getPitchOutput(projectId);
   if (!pitchOutput) {
-    return NextResponse.json({ error: "Pitch output not found" }, { status: 404 });
+    return NextResponse.json({ error: "Missing pitch_output in request body" }, { status: 400 });
   }
 
   const html = renderSlideHTML(pitchOutput);
@@ -106,7 +92,7 @@ export async function GET(req: NextRequest) {
 
     const filename = `${pitchOutput.deck_title.replace(/\s+/g, "_").toLowerCase()}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
