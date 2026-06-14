@@ -31,6 +31,7 @@ create table public.investors (
   reply_received_at timestamptz,
   reply_draft     text,
   reply_sent      boolean default false,
+  reply_sentiment text;
 
   meeting_scheduled boolean default false,
   meet_link       text,

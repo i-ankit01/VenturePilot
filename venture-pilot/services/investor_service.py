@@ -7,6 +7,7 @@ from tavily import TavilyClient
 from agents import investor_agent
 from schemas.investor import InvestorRecord
 from services.supabase_client import get_supabase
+from integrations import google_auth, gmail_client, calendar_client
 
 tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
@@ -153,3 +154,187 @@ async def generate_emails(project_id: str) -> list[InvestorRecord]:
         updated.append(InvestorRecord(**result.data[0]))
 
     return updated
+
+
+# gmail Oauth 
+def _get_project_user_id(project_id: str) -> str:
+    supabase = get_supabase()
+    result = (
+        supabase.table("projects")
+        .select("user_id")
+        .eq("id", project_id)
+        .single()
+        .execute()
+    )
+    if not result.data:
+        raise ValueError(f"Project {project_id} not found")
+    return result.data["user_id"]
+
+
+def _get_investor(investor_id: str) -> InvestorRecord:
+    supabase = get_supabase()
+    result = (
+        supabase.table("investors")
+        .select("*")
+        .eq("id", investor_id)
+        .single()
+        .execute()
+    )
+    if not result.data:
+        raise ValueError(f"Investor {investor_id} not found")
+    return InvestorRecord(**result.data)
+
+
+async def send_investor_email(project_id: str, investor_id: str) -> InvestorRecord:
+    user_id = _get_project_user_id(project_id)
+    creds = google_auth.get_credentials_for_user(user_id)
+    investor = _get_investor(investor_id)
+
+    if not investor.email_subject or not investor.email_body:
+        raise ValueError("No email draft found - generate emails first")
+
+    sent = gmail_client.send_email(
+        creds, to=investor.email, subject=investor.email_subject, body=investor.email_body,
+    )
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("investors")
+        .update({
+            "email_sent": True,
+            "email_sent_at": datetime.now(timezone.utc).isoformat(),
+            "gmail_thread_id": sent["threadId"],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", investor_id)
+        .execute()
+    )
+    return InvestorRecord(**result.data[0])
+
+
+async def check_replies(project_id: str) -> list[InvestorRecord]:
+    user_id = _get_project_user_id(project_id)
+    creds = google_auth.get_credentials_for_user(user_id)
+    my_email = gmail_client.get_profile_email(creds)
+
+    supabase = get_supabase()
+    updated = []
+
+    for investor in get_investors(project_id):
+        if not investor.gmail_thread_id or investor.reply_received:
+            continue
+
+        messages = gmail_client.get_thread_messages(creds, investor.gmail_thread_id)
+        if len(messages) < 2:
+            continue
+
+        latest = messages[-1]
+        if my_email in gmail_client.get_header(latest, "From"):
+            continue  # latest message is still ours
+
+        reply_text = gmail_client.extract_message_text(latest)
+
+        result = (
+            supabase.table("investors")
+            .update({
+                "reply_received": reply_text,
+                "reply_received_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", str(investor.id))
+            .execute()
+        )
+        updated.append(InvestorRecord(**result.data[0]))
+
+    return updated
+
+
+async def generate_reply(project_id: str, investor_id: str) -> InvestorRecord:
+    startup_context = _get_startup_context(project_id)
+    investor = _get_investor(investor_id)
+
+    if not investor.reply_received:
+        raise ValueError("No reply received yet for this investor")
+
+    draft = investor_agent.draft_reply(startup_context, investor, investor.reply_received)
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("investors")
+        .update({
+            "reply_draft": draft.draft.body,
+            "reply_sentiment": draft.sentiment,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", investor_id)
+        .execute()
+    )
+    return InvestorRecord(**result.data[0])
+
+
+async def send_investor_reply(project_id: str, investor_id: str, body: str | None = None) -> InvestorRecord:
+    user_id = _get_project_user_id(project_id)
+    creds = google_auth.get_credentials_for_user(user_id)
+    investor = _get_investor(investor_id)
+
+    reply_body = body or investor.reply_draft
+    if not reply_body:
+        raise ValueError("No reply draft to send")
+
+    thread_messages = gmail_client.get_thread_messages(creds, investor.gmail_thread_id)
+    original_message_id = gmail_client.get_header(thread_messages[0], "Message-ID")
+
+    gmail_client.send_email(
+        creds,
+        to=investor.email,
+        subject=f"Re: {investor.email_subject}",
+        body=reply_body,
+        thread_id=investor.gmail_thread_id,
+        in_reply_to_message_id=original_message_id,
+    )
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("investors")
+        .update({"reply_sent": True, "updated_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", investor_id)
+        .execute()
+    )
+    return InvestorRecord(**result.data[0])
+
+
+async def schedule_meeting(
+    project_id: str,
+    investor_id: str,
+    start_time: str,
+    end_time: str,
+    timezone_str: str = "Asia/Kolkata",
+) -> InvestorRecord:
+    user_id = _get_project_user_id(project_id)
+    creds = google_auth.get_credentials_for_user(user_id)
+    investor = _get_investor(investor_id)
+    startup_context = _get_startup_context(project_id)
+
+    meeting = calendar_client.create_meeting(
+        creds,
+        summary=f"{startup_context.get('refined_idea', 'Intro call')} <> {investor.firm}",
+        description=f"Intro call: {startup_context.get('one_liner', '')} — {investor.name} ({investor.firm})",
+        start_time=start_time,
+        end_time=end_time,
+        attendee_email=investor.email,
+        timezone_str=timezone_str,
+    )
+
+    supabase = get_supabase()
+    result = (
+        supabase.table("investors")
+        .update({
+            "meeting_scheduled": True,
+            "meet_link": meeting["meet_link"],
+            "meeting_time": start_time,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", investor_id)
+        .execute()
+    )
+    return InvestorRecord(**result.data[0])
