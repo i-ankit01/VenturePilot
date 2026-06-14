@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Zap,
-} from "lucide-react";
+import { LayoutDashboard, Zap } from "lucide-react";
+import { Handshake } from "lucide-react";
 
 const navItems = [
   {
@@ -14,6 +12,7 @@ const navItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  { label: "Find Investors", href: "/investors", icon: Handshake },
 ];
 
 export function Sidebar() {
@@ -62,7 +61,7 @@ export function Sidebar() {
                 "group relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all duration-150",
                 isActive
                   ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground/70 hover:bg-accent hover:text-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-accent hover:text-accent-foreground",
               )}
             >
               {/* Active indicator */}
@@ -72,13 +71,18 @@ export function Sidebar() {
               <item.icon
                 className={cn(
                   "h-4 w-4 shrink-0 transition-colors",
-                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground group-hover:text-foreground",
                 )}
                 strokeWidth={isActive ? 2.5 : 2}
               />
               <span
                 className="font-medium"
-                style={{ fontFamily: "'DM Mono', monospace", fontSize: "12.5px" }}
+                style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: "12.5px",
+                }}
               >
                 {item.label}
               </span>
@@ -94,7 +98,9 @@ export function Sidebar() {
             VP
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-[11px] font-medium text-foreground">Founder</span>
+            <span className="text-[11px] font-medium text-foreground">
+              Founder
+            </span>
             <span className="text-[10px] text-muted-foreground">Free plan</span>
           </div>
           <div className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399]" />
