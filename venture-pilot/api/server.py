@@ -8,6 +8,7 @@ import uuid, os
 from main import run_venture_pilot
 from langgraph.graph import StateGraph
 from graph.workflow import build_graph
+from routers import investors
 
 app = FastAPI()
 
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(investors.router)
 
 # In-memory job store (replace with Redis for production)
 jobs = {}
