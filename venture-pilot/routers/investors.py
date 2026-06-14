@@ -13,6 +13,12 @@ class ScheduleMeetingRequest(BaseModel):
 class SendReplyRequest(BaseModel):
     body: str | None = None
 
+
+class SendEmailRequest(BaseModel):
+    subject: str
+    body: str
+
+
 router = APIRouter(prefix="/api/investors", tags=["investors"])
 
 
@@ -39,10 +45,19 @@ async def generate_emails(project_id: str):
         raise HTTPException(status_code=400, detail=str(e))
     return {"investors": investors}
 
+# @router.post("/{project_id}/{investor_id}/send-email")
+# async def send_email(project_id: str, investor_id: str):
+#     try:
+#         return await investor_service.send_investor_email(project_id, investor_id)
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
+# so that user can edit the body before sending 
 @router.post("/{project_id}/{investor_id}/send-email")
-async def send_email(project_id: str, investor_id: str):
+async def send_email(project_id: str, investor_id: str, payload: SendEmailRequest):
     try:
-        return await investor_service.send_investor_email(project_id, investor_id)
+        return await investor_service.send_investor_email(project_id, investor_id, payload.subject, payload.body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

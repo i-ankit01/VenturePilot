@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request as GoogleAuthRequest
+import secrets
 
 from services.supabase_client import get_supabase
 
@@ -13,6 +14,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
 ]
 
 _CLIENT_CONFIG = {
@@ -26,22 +28,46 @@ _CLIENT_CONFIG = {
 }
 
 
-def build_auth_url(state: str) -> str:
+def generate_code_verifier() -> str:
+    """PKCE code_verifier - must persist between /login and /callback."""
+    return secrets.token_urlsafe(64)[:128]
+
+
+# def build_auth_url(state: str) -> str:
+#     flow = Flow.from_client_config(_CLIENT_CONFIG, scopes=SCOPES, state=state)
+#     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
+#     auth_url, _ = flow.authorization_url(
+#         access_type="offline",
+#         include_granted_scopes="true",
+#         prompt="consent",  # forces a refresh_token on every connect
+#     )
+#     return auth_url
+
+def build_auth_url(state: str, code_verifier: str) -> str:
     flow = Flow.from_client_config(_CLIENT_CONFIG, scopes=SCOPES, state=state)
     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
+    flow.code_verifier = code_verifier
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        prompt="consent",  # forces a refresh_token on every connect
+        prompt="consent",
     )
     return auth_url
 
 
-def exchange_code(code: str) -> Credentials:
+# def exchange_code(code: str) -> Credentials:
+#     flow = Flow.from_client_config(_CLIENT_CONFIG, scopes=SCOPES)
+#     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
+#     flow.fetch_token(code=code)
+#     return flow.credentials
+
+def exchange_code(code: str, code_verifier: str) -> Credentials:
     flow = Flow.from_client_config(_CLIENT_CONFIG, scopes=SCOPES)
     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
+    flow.code_verifier = code_verifier
     flow.fetch_token(code=code)
     return flow.credentials
+
 
 
 def save_credentials(user_id: str, creds: Credentials):

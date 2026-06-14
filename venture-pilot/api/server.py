@@ -9,6 +9,7 @@ from main import run_venture_pilot
 from langgraph.graph import StateGraph
 from graph.workflow import build_graph
 from routers import investors
+from routers import auth_google
 
 app = FastAPI()
 
@@ -20,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(investors.router)
+app.include_router(auth_google.router)
 
 # In-memory job store (replace with Redis for production)
 jobs = {}

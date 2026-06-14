@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InvestorProjectCard } from "@/components/investors/investor-project-card";
 import { Radar } from "lucide-react";
 import type { ProjectSummary } from "@/lib/investors/types";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function InvestorsPage() {
   const supabase = await createClient();
@@ -15,6 +16,7 @@ export default async function InvestorsPage() {
   const completed = (projects ?? []) as ProjectSummary[];
 
   return (
+    <AppShell>
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <div>
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Find Investors</p>
@@ -44,5 +46,6 @@ export default async function InvestorsPage() {
         </div>
       )}
     </div>
+    </AppShell>
   );
 }
