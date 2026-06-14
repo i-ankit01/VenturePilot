@@ -9,7 +9,7 @@ Responsibilities:
 """
 
 from openai import OpenAI  # swap for your shared client if one exists
-from models.investor import (
+from schemas.investor import (
     InvestorScoringResponse,
     EmailDraftResponse,
     ReplyDraftResponse,

@@ -5,7 +5,7 @@ from uuid import UUID
 from tavily import TavilyClient
 
 from agents import investor_agent
-from models.investor import InvestorRecord
+from schemas.investor import InvestorRecord
 from services.supabase_client import get_supabase
 
 tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
