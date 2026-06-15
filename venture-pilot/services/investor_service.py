@@ -185,22 +185,29 @@ def _get_investor(investor_id: str) -> InvestorRecord:
     return InvestorRecord(**result.data)
 
 
-async def send_investor_email(project_id: str, investor_id: str) -> InvestorRecord:
+async def send_investor_email(
+    project_id: str,
+    investor_id: str,
+    subject: str,
+    body: str,
+) -> InvestorRecord:
     user_id = _get_project_user_id(project_id)
     creds = google_auth.get_credentials_for_user(user_id)
     investor = _get_investor(investor_id)
 
-    if not investor.email_subject or not investor.email_body:
-        raise ValueError("No email draft found - generate emails first")
+    if not subject or not body:
+        raise ValueError("Subject and body are required to send an email")
 
     sent = gmail_client.send_email(
-        creds, to=investor.email, subject=investor.email_subject, body=investor.email_body,
+        creds, to=investor.email, subject=subject, body=body,
     )
 
     supabase = get_supabase()
     result = (
         supabase.table("investors")
         .update({
+            "email_subject": subject,
+            "email_body": body,
             "email_sent": True,
             "email_sent_at": datetime.now(timezone.utc).isoformat(),
             "gmail_thread_id": sent["threadId"],
@@ -210,6 +217,7 @@ async def send_investor_email(project_id: str, investor_id: str) -> InvestorReco
         .execute()
     )
     return InvestorRecord(**result.data[0])
+
 
 
 async def check_replies(project_id: str) -> list[InvestorRecord]:
