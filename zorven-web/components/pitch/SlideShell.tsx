@@ -1,11 +1,7 @@
-
 // components/pitch/SlideShell.tsx
-// The shared 1280×720 frame every slide renders inside.
-// Also exports the design tokens used across all slide components.
 
 import React from "react";
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
 export const T = {
   bg: "#050507",
   bgCard: "rgba(255,255,255,0.04)",
@@ -27,7 +23,6 @@ export const T = {
   fontBody: "'Plus Jakarta Sans', sans-serif",
 } as const;
 
-// ── Slide shell ───────────────────────────────────────────────────────────────
 interface SlideShellProps {
   children: React.ReactNode;
   variant?: "dark" | "light";
@@ -48,63 +43,136 @@ export function SlideShell({ children, leftBar = true }: SlideShellProps) {
         flexDirection: "column",
       }}
     >
-      {/* Ambient radial glow top-right */}
+      {/* Ambient radial — top right */}
       <div
         style={{
           position: "absolute",
-          top: -120,
-          right: -80,
-          width: 500,
-          height: 500,
+          top: -160,
+          right: -100,
+          width: 600,
+          height: 600,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(56,189,248,0.09) 0%, transparent 70%)",
           pointerEvents: "none",
         }}
       />
 
-      {/* Left accent bar */}
+      {/* Second ambient — bottom left */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: -180,
+          left: -80,
+          width: 480,
+          height: 480,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Subtle grid texture */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)
+          `,
+          backgroundSize: "48px 48px",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Left accent bar — tapered glow */}
       {leftBar && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: 4,
-            height: "100%",
-            background: `linear-gradient(180deg, ${T.neon} 0%, rgba(56,189,248,0.3) 100%)`,
-            boxShadow: `4px 0 20px rgba(56,189,248,0.3)`,
-          }}
-        />
+        <>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: 3,
+              height: "100%",
+              background: `linear-gradient(180deg, transparent 0%, ${T.neon} 20%, ${T.neon} 80%, transparent 100%)`,
+              boxShadow: `4px 0 24px rgba(56,189,248,0.4)`,
+            }}
+          />
+          {/* Glow halo on bar */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "20%",
+              width: 60,
+              height: "60%",
+              background:
+                "radial-gradient(ellipse at left, rgba(56,189,248,0.08) 0%, transparent 70%)",
+              pointerEvents: "none",
+            }}
+          />
+        </>
       )}
 
-      <div style={{ paddingLeft: leftBar ? 32 : 0, flex: 1, display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          paddingLeft: leftBar ? 36 : 0,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {children}
       </div>
     </div>
   );
 }
 
-// ── Reusable primitives ───────────────────────────────────────────────────────
+// ── Label ─────────────────────────────────────────────────────────────────────
 
 export function SlideLabel({ children }: { children: React.ReactNode }) {
   return (
     <span
       style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
         fontFamily: T.fontBody,
         fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: "0.18em",
+        fontWeight: 700,
+        letterSpacing: "0.22em",
         textTransform: "uppercase",
         color: T.neon,
-        opacity: 0.7,
       }}
     >
+      {/* Leading tick */}
+      <span
+        style={{
+          display: "inline-block",
+          width: 16,
+          height: 1.5,
+          background: T.neon,
+          borderRadius: 2,
+          boxShadow: `0 0 6px ${T.neon}`,
+        }}
+      />
       {children}
     </span>
   );
 }
 
-export function SlideHeading({ children, size = 32 }: { children: React.ReactNode; size?: number }) {
+// ── Heading ───────────────────────────────────────────────────────────────────
+
+export function SlideHeading({
+  children,
+  size = 32,
+}: {
+  children: React.ReactNode;
+  size?: number;
+}) {
   return (
     <h2
       style={{
@@ -113,14 +181,16 @@ export function SlideHeading({ children, size = 32 }: { children: React.ReactNod
         fontWeight: 700,
         color: T.white,
         margin: 0,
-        lineHeight: 1.15,
-        letterSpacing: "-0.02em",
+        lineHeight: 1.12,
+        letterSpacing: "-0.025em",
       }}
     >
       {children}
     </h2>
   );
 }
+
+// ── Glass card ────────────────────────────────────────────────────────────────
 
 export function GlassCard({
   children,
@@ -134,31 +204,69 @@ export function GlassCard({
   return (
     <div
       style={{
-        background: T.bgCard,
+        position: "relative",
+        background: accent
+          ? "rgba(56,189,248,0.06)"
+          : "rgba(255,255,255,0.035)",
         border: `1px solid ${accent ? T.borderAccent : T.border}`,
-        borderRadius: 12,
-        padding: "16px 20px",
-        boxShadow: accent ? T.neonGlow : "none",
+        borderRadius: 16,
+        padding: "18px 22px",
+        boxShadow: accent
+          ? `0 0 28px rgba(56,189,248,0.18), inset 0 1px 0 rgba(255,255,255,0.06)`
+          : `inset 0 1px 0 rgba(255,255,255,0.05)`,
+        overflow: "hidden",
         ...style,
       }}
     >
+      {/* Top shimmer line */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: "10%",
+          width: "80%",
+          height: 1,
+          background: accent
+            ? `linear-gradient(90deg, transparent, rgba(56,189,248,0.6), transparent)`
+            : `linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)`,
+          borderRadius: 1,
+        }}
+      />
       {children}
     </div>
   );
 }
 
+// ── Divider ───────────────────────────────────────────────────────────────────
+
 export function NeonDivider() {
   return (
-    <div
-      style={{
-        height: 1,
-        background: `linear-gradient(90deg, ${T.neon} 0%, transparent 60%)`,
-        opacity: 0.3,
-        marginBottom: 20,
-      }}
-    />
+    <div style={{ position: "relative", marginBottom: 22, height: 1 }}>
+      <div
+        style={{
+          height: 1,
+          background: `linear-gradient(90deg, ${T.neon} 0%, rgba(56,189,248,0.2) 50%, transparent 100%)`,
+          borderRadius: 1,
+        }}
+      />
+      {/* Glow dot at start */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -2,
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: T.neon,
+          boxShadow: `0 0 8px ${T.neon}`,
+        }}
+      />
+    </div>
   );
 }
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
 
 export function StatCard({
   value,
@@ -174,23 +282,45 @@ export function StatCard({
   return (
     <div
       style={{
-        background: accent ? T.neonDim : T.bgCard,
+        position: "relative",
+        background: accent ? "rgba(56,189,248,0.08)" : T.bgCard,
         border: `1px solid ${accent ? T.borderAccent : T.border}`,
-        borderRadius: 12,
-        padding: "20px 16px",
+        borderRadius: 14,
+        padding: "22px 18px",
         textAlign: "center",
-        boxShadow: accent ? T.neonGlow : "none",
+        overflow: "hidden",
+        boxShadow: accent
+          ? `0 0 32px rgba(56,189,248,0.2), inset 0 1px 0 rgba(255,255,255,0.07)`
+          : `inset 0 1px 0 rgba(255,255,255,0.04)`,
         ...style,
       }}
     >
+      {/* Corner accent arc (accent cards only) */}
+      {accent && (
+        <div
+          style={{
+            position: "absolute",
+            top: -30,
+            right: -30,
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            border: `1px solid rgba(56,189,248,0.25)`,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
       <div
         style={{
           fontFamily: T.fontHead,
-          fontSize: 26,
+          fontSize: 30,
           fontWeight: 700,
           color: accent ? T.neon : T.white,
           lineHeight: 1,
           marginBottom: 8,
+          letterSpacing: "-0.02em",
+          textShadow: accent ? `0 0 20px rgba(56,189,248,0.5)` : "none",
         }}
       >
         {value}
@@ -198,10 +328,10 @@ export function StatCard({
       <div
         style={{
           fontFamily: T.fontBody,
-          fontSize: 11,
-          fontWeight: 500,
+          fontSize: 10,
+          fontWeight: 600,
           color: T.gray2,
-          letterSpacing: "0.06em",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
         }}
       >
@@ -211,34 +341,56 @@ export function StatCard({
   );
 }
 
+// ── Bullet row ────────────────────────────────────────────────────────────────
+
+let _bulletIndex = 0;
+
 export function BulletRow({
   headline,
   supporting,
+  index,
 }: {
   headline: string;
   supporting: string;
+  index?: number;
 }) {
+  const n = index !== undefined ? index : ++_bulletIndex;
+
   return (
-    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+      {/* Numbered ring badge */}
       <div
         style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: T.neon,
-          marginTop: 7,
           flexShrink: 0,
-          boxShadow: `0 0 8px ${T.neon}`,
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          border: `1px solid ${T.borderAccent}`,
+          background: "rgba(56,189,248,0.08)",
+          boxShadow: `0 0 10px rgba(56,189,248,0.2), inset 0 1px 0 rgba(255,255,255,0.06)`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: T.fontHead,
+          fontSize: 11,
+          fontWeight: 700,
+          color: T.neon,
+          letterSpacing: "-0.01em",
+          marginTop: 1,
         }}
-      />
-      <div>
+      >
+        {String(n).padStart(2, "0")}
+      </div>
+
+      <div style={{ flex: 1 }}>
         <div
           style={{
             fontFamily: T.fontHead,
             fontSize: 15,
             fontWeight: 600,
             color: T.white,
-            marginBottom: 3,
+            marginBottom: 4,
+            letterSpacing: "-0.01em",
           }}
         >
           {headline}
@@ -248,7 +400,7 @@ export function BulletRow({
             fontFamily: T.fontBody,
             fontSize: 12,
             color: T.gray2,
-            lineHeight: 1.5,
+            lineHeight: 1.55,
           }}
         >
           {supporting}
@@ -258,21 +410,30 @@ export function BulletRow({
   );
 }
 
+// ── Slide number ──────────────────────────────────────────────────────────────
+
 export function SlideNumber({ n }: { n: number }) {
   return (
     <div
       style={{
         position: "absolute",
-        bottom: 20,
-        right: 28,
+        bottom: 22,
+        right: 30,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
         fontFamily: T.fontBody,
-        fontSize: 11,
+        fontSize: 10,
         color: T.gray3,
         fontWeight: 500,
-        letterSpacing: "0.08em",
+        letterSpacing: "0.1em",
       }}
     >
-      {String(n).padStart(2, "0")} / 12
+      <span style={{ color: T.neon, fontWeight: 700 }}>
+        {String(n).padStart(2, "0")}
+      </span>
+      <span style={{ opacity: 0.4 }}>/</span>
+      <span>12</span>
     </div>
   );
 }
