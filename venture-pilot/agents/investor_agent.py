@@ -132,9 +132,11 @@ def draft_reply(
             "subject": investor.email_subject,
             "body": investor.email_body,
         },
-        "incoming_reply": incoming_message,
+        "incoming_reply": 
+        
+        incoming_message,
     }
-
+    
     completion = client.beta.chat.completions.parse(
         model=MODEL,
         messages=[

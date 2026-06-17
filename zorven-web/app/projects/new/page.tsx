@@ -3,11 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createProject } from "@/actions/projects";
+import { startPipeline } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
   ArrowRight,
@@ -16,9 +15,8 @@ import {
   CornerDownLeft,
   AlertCircle,
   ChevronDown,
+  Paperclip,
 } from "lucide-react";
-import { startPipeline } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 // ─── Static options ───────────────────────────────────────────────────────────
 const INDUSTRIES = [
@@ -73,6 +71,8 @@ const SUGGESTIONS = [
   },
 ];
 
+const MONO = { fontFamily: "'DM Mono', monospace" };
+
 // ─── Animated thinking dots ───────────────────────────────────────────────────
 function ThinkingDots() {
   return (
@@ -80,7 +80,7 @@ function ThinkingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-1 w-1 rounded-full bg-primary animate-bounce"
+          className="inline-block h-1 w-1 rounded-full bg-blue-400 animate-bounce"
           style={{ animationDelay: `${i * 150}ms`, animationDuration: "800ms" }}
         />
       ))}
@@ -111,8 +111,8 @@ function LaunchSequence({ activeIndex }: { activeIndex: number }) {
           <div
             key={agent.key}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 transition-all duration-300",
-              isActive && "bg-primary/10 border border-primary/20",
+              "flex items-center gap-3 rounded-md px-3 py-2 transition-all duration-300 backdrop-blur-xl",
+              isActive && "bg-blue-500/10 border border-blue-400/20",
               isDone && "opacity-50",
               isPending && "opacity-20",
             )}
@@ -121,21 +121,20 @@ function LaunchSequence({ activeIndex }: { activeIndex: number }) {
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full transition-all",
                 isDone && "bg-emerald-400",
-                isActive &&
-                  "bg-primary shadow-[0_0_6px_var(--color-primary)] animate-pulse",
-                isPending && "bg-muted-foreground/30",
+                isActive && "bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)] animate-pulse",
+                isPending && "bg-white/20",
               )}
             />
             <span
               className={cn(
                 "text-[11px] font-semibold tracking-wide",
-                isActive ? "text-primary" : "text-muted-foreground",
+                isActive ? "text-blue-300" : "text-white/40",
               )}
-              style={{ fontFamily: "'DM Mono', monospace" }}
+              style={MONO}
             >
               {agent.label}
             </span>
-            <span className="text-[11px] text-muted-foreground/60">
+            <span className="text-[11px] text-white/30">
               {isActive ? <ThinkingDots /> : isDone ? "✓" : agent.desc}
             </span>
           </div>
@@ -145,8 +144,8 @@ function LaunchSequence({ activeIndex }: { activeIndex: number }) {
   );
 }
 
-// ─── Small select wrapper ─────────────────────────────────────────────────────
-function NativeSelect({
+// ─── Glass select wrapper (styled like AnimatedAIChat's surfaces) ─────────────
+function GlassSelect({
   value,
   onChange,
   options,
@@ -163,23 +162,24 @@ function NativeSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "w-full appearance-none rounded-md border border-border/60 bg-card px-3 py-2 pr-8",
-          "text-[13px] text-foreground transition-colors",
-          "focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30",
-          !value && "text-muted-foreground/50",
+          "w-full appearance-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 pr-8",
+          "text-[13px] text-white/90 transition-colors backdrop-blur-xl",
+          "focus:border-blue-400/40 focus:outline-none focus:ring-1 focus:ring-blue-400/30",
+          "hover:bg-white/[0.05]",
+          !value && "text-white/30",
         )}
-        style={{ fontFamily: "'DM Mono', monospace" }}
+        style={MONO}
       >
-        <option value="" disabled>
+        <option value="" disabled className="bg-[#0A0A0B] text-white/50">
           {placeholder}
         </option>
         {options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <option key={o.value} value={o.value} className="bg-[#0A0A0B] text-white/90">
             {o.label}
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />
     </div>
   );
 }
@@ -199,9 +199,19 @@ export default function NewProjectPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [launchStep, setLaunchStep] = useState(0);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -283,234 +293,298 @@ export default function NewProjectPage() {
 
   return (
     <AppShell>
-      <div className="flex min-h-full flex-col items-center justify-center px-6 py-14">
-        {/* ── Input phase ── */}
-        {phase === "input" && (
-          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header */}
-            <div className="mb-8 text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <span
-                  className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                >
-                  9 AI Agents Standing By
-                </span>
-              </div>
-              <h1
-                className="text-[30px] font-bold leading-tight tracking-tight text-foreground"
-                style={{ fontFamily: "'DM Mono', monospace" }}
-              >
-                What are you building?
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Tell us your idea, industry, and who you're building for —
-                agents handle the rest.
-              </p>
-            </div>
+      <div className="relative min-h-full w-full overflow-hidden bg-[#0A0A0B] text-white">
+        {/* Ambient gradient blobs */}
+<div className="pointer-events-none absolute inset-0 h-full w-full overflow-hidden">
+  <div className="absolute top-[-8rem] left-1/2 -translate-x-1/2 w-[28rem] h-[28rem] rounded-full bg-blue-500/25 blur-[150px]" />
 
-            {/* Main card */}
-            <div className="rounded-xl border border-border/60 bg-card shadow-[0_4px_32px_rgba(0,0,0,0.12)]">
-              {/* Idea textarea */}
-              <div className="relative transition-all focus-within:border-primary/40">
-                <Textarea
-                  ref={textareaRef}
-                  value={idea}
-                  onChange={handleIdeaChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Describe your startup idea in plain English…"
-                  className="min-h-[130px] resize-none rounded-t-xl rounded-b-none border-0 border-b border-border/40 bg-transparent px-5 pt-5 pb-4 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  style={{ fontFamily: "inherit", overflow: "hidden" }}
-                />
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-primary/0 to-transparent transition-all duration-300 peer-focus:via-primary/40" />
-              </div>
+  <div className="absolute top-[25%] left-[-6rem] w-[18rem] h-[18rem] rounded-full bg-sky-500/20 blur-[200px]" />
 
-              {/* Fields row */}
-              <div className="grid grid-cols-2 gap-3 border-b border-border/40 px-5 py-4">
-                {/* Industry */}
-                <div className="space-y-1.5">
-                  <Label
-                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
-                  >
-                    Industry <span className="text-destructive">*</span>
-                  </Label>
-                  <NativeSelect
-                    value={industry}
-                    onChange={setIndustry}
-                    placeholder="Select industry"
-                    options={INDUSTRIES.map((ind) => ({
-                      value: ind,
-                      label: ind,
-                    }))}
-                  />
-                </div>
+  <div className="absolute top-[20%] right-[-6rem] w-[18rem] h-[18rem] rounded-full bg-indigo-500/20 blur-[200px]" />
+</div>
 
-                {/* Target market */}
-                <div className="space-y-1.5">
-                  <Label
-                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
-                  >
-                    Target Market <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    value={targetMarket}
-                    onChange={(e) => setTargetMarket(e.target.value)}
-                    placeholder="e.g. SMB HR teams in the US"
-                    className="h-9 border-border/60 bg-card text-[13px] focus-visible:ring-primary/30"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
-                  />
-                </div>
+      
 
-                {/* Stage */}
-                <div className="space-y-1.5">
-                  <Label
-                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
-                  >
-                    Stage
-                  </Label>
-                  <NativeSelect
-                    value={stage}
-                    onChange={setStage}
-                    placeholder="Select stage"
-                    options={STAGES}
-                  />
-                </div>
-
-                {/* Budget */}
-                <div className="space-y-1.5">
-                  <Label
-                    className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
-                  >
-                    Budget
-                  </Label>
-                  <NativeSelect
-                    value={budget}
-                    onChange={setBudget}
-                    placeholder="Select budget"
-                    options={BUDGETS}
-                  />
-                </div>
-              </div>
-
-              {/* Bottom bar */}
-              <div className="flex items-center justify-between px-5 py-3">
-                <span
-                  className="text-[11px] text-muted-foreground/40"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                >
-                  <CornerDownLeft className="mr-1 inline h-3 w-3" />⌘ + Enter to
-                  build
-                </span>
-                <Button
-                  onClick={handleBuild}
-                  disabled={!canBuild}
-                  size="sm"
-                  className="group gap-1.5 shadow-[0_0_16px_rgba(0,0,0,0.2)]"
-                >
-                  <Zap className="h-3.5 w-3.5" />
-                  Build
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="mt-3 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
-
-            {/* Suggestions */}
-            <div className="mt-8">
-              <div className="mb-3 flex items-center gap-2">
-                <Lightbulb className="h-3.5 w-3.5 text-muted-foreground/40" />
-                <span
-                  className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/40"
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                >
-                  Try an example
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => applySuggestion(s)}
-                    className="group rounded-lg border border-border/40 bg-card/50 px-4 py-3 text-left text-[12px] leading-relaxed text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
-                  >
-                    <span
-                      className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 group-hover:text-primary/60"
-                      style={{ fontFamily: "'DM Mono', monospace" }}
-                    >
-                      {s.industry} · {s.target_market}
-                    </span>
-                    {s.idea}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Launching / redirecting phase ── */}
-        {isBuilding && (
-          <div className="flex flex-col items-center animate-in fade-in duration-400">
-            <div className="relative mb-6">
-              <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30">
-                <Zap className="h-7 w-7 text-primary" />
-              </div>
-            </div>
-
-            <h2
-              className="mb-1 text-lg font-bold text-foreground"
-              style={{ fontFamily: "'DM Mono', monospace" }}
+        <div className="relative z-10 flex min-h-full flex-col items-center justify-center px-6 py-14">
+          {/* ── Input phase ── */}
+          {phase === "input" && (
+            <motion.div
+              className="w-full max-w-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              {phase === "redirecting"
-                ? "Taking you there…"
-                : "Launching agents"}
-            </h2>
-            <p className="mb-2 text-sm text-muted-foreground">
-              {phase === "redirecting"
-                ? "Pipeline is running. Results appear as each agent finishes."
-                : "9 specialized AI agents are being dispatched."}
-            </p>
+              {/* Header */}
+              <div className="mb-8 text-center space-y-3">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/[0.06] px-3 py-1.5 backdrop-blur-xl"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-blue-300" />
+                  <span
+                    className="text-[11px] font-semibold uppercase tracking-[0.15em] text-blue-300"
+                    style={MONO}
+                  >
+                    9 AI Agents Standing By
+                  </span>
+                </motion.div>
+                <div>
+                  <h1
+                    className="text-[30px] font-bold leading-tight tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white/95 to-white/40 pb-1"
+                    style={MONO}
+                  >
+                    What are you building?
+                  </h1>
+                  <motion.div
+                    className="mx-auto h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: "60%", opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                  />
+                </div>
+                <motion.p
+                  className="text-sm text-white/40"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  Tell us your idea, industry, and who you're building for —
+                  agents handle the rest.
+                </motion.p>
+              </div>
 
-            <div className="mb-4 flex gap-2">
-              <span
-                className="rounded-sm border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+              {/* Main glass card */}
+              <motion.div
+                className="relative backdrop-blur-2xl bg-white/[0.02] rounded-2xl border border-white/[0.05] shadow-2xl"
+                initial={{ scale: 0.98 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1 }}
               >
-                {industry}
-              </span>
-              <span
-                className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground"
-                style={{ fontFamily: "'DM Mono', monospace" }}
-              >
-                {stage}
-              </span>
-              <span
-                className="rounded-sm border border-border/40 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground"
-                style={{ fontFamily: "'DM Mono', monospace" }}
-              >
-                {budget}
-              </span>
-            </div>
+                {/* Idea textarea */}
+                <div className="p-4 border-b border-white/[0.05]">
+                  <textarea
+                    ref={textareaRef}
+                    value={idea}
+                    onChange={handleIdeaChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
+                    placeholder="Describe your startup idea in plain English…"
+                    className="min-h-[110px] w-full resize-none bg-transparent px-1 py-1 text-sm leading-relaxed text-white/90 placeholder:text-white/20 focus:outline-none"
+                    style={{ fontFamily: "inherit", overflow: "hidden" }}
+                  />
+                </div>
 
-            <p className="mb-2 max-w-md rounded-md border border-border/40 bg-muted/30 px-4 py-2.5 text-center text-[12px] leading-relaxed text-muted-foreground/70 italic">
-              "{idea.length > 120 ? idea.slice(0, 120) + "…" : idea}"
-            </p>
+                {/* Fields row */}
+                <div className="grid grid-cols-2 gap-3 border-b border-white/[0.05] px-4 py-4">
+                  {/* Industry */}
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/30"
+                      style={MONO}
+                    >
+                      Industry <span className="text-rose-400">*</span>
+                    </label>
+                    <GlassSelect
+                      value={industry}
+                      onChange={setIndustry}
+                      placeholder="Select industry"
+                      options={INDUSTRIES.map((ind) => ({
+                        value: ind,
+                        label: ind,
+                      }))}
+                    />
+                  </div>
 
-            <LaunchSequence activeIndex={launchStep} />
-          </div>
-        )}
+                  {/* Target market */}
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/30"
+                      style={MONO}
+                    >
+                      Target Market <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      value={targetMarket}
+                      onChange={(e) => setTargetMarket(e.target.value)}
+                      placeholder="e.g. SMB HR teams in the US"
+                      className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 text-[13px] text-white/90 placeholder:text-white/20 backdrop-blur-xl transition-colors hover:bg-white/[0.05] focus:border-blue-400/40 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
+                      style={MONO}
+                    />
+                  </div>
+
+                  {/* Stage */}
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/30"
+                      style={MONO}
+                    >
+                      Stage
+                    </label>
+                    <GlassSelect
+                      value={stage}
+                      onChange={setStage}
+                      placeholder="Select stage"
+                      options={STAGES}
+                    />
+                  </div>
+
+                  {/* Budget */}
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/30"
+                      style={MONO}
+                    >
+                      Budget
+                    </label>
+                    <GlassSelect
+                      value={budget}
+                      onChange={setBudget}
+                      placeholder="Select budget"
+                      options={BUDGETS}
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom bar */}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span
+                    className="text-[11px] text-white/25"
+                    style={MONO}
+                  >
+                    <CornerDownLeft className="mr-1 inline h-3 w-3" />⌘ + Enter
+                    to build
+                  </span>
+                  <motion.button
+                    type="button"
+                    onClick={handleBuild}
+                    disabled={!canBuild}
+                    whileHover={canBuild ? { scale: 1.01 } : {}}
+                    whileTap={canBuild ? { scale: 0.98 } : {}}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                      canBuild
+                        ? "bg-white text-[#0A0A0B] shadow-lg shadow-blue-400/15"
+                        : "bg-white/[0.05] text-white/30 cursor-not-allowed",
+                    )}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    Build
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </motion.button>
+                </div>
+              </motion.div>
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-3 flex items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300 backdrop-blur-xl"
+                  >
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Suggestions */}
+              <div className="mt-8">
+                <div className="mb-3 flex items-center gap-2">
+                  <Lightbulb className="h-3.5 w-3.5 text-white/25" />
+                  <span
+                    className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/25"
+                    style={MONO}
+                  >
+                    Try an example
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {SUGGESTIONS.map((s, i) => (
+                    <motion.button
+                      key={i}
+                      onClick={() => applySuggestion(s)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      className="group rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-left text-[12px] leading-relaxed text-white/50 backdrop-blur-xl transition-all hover:border-blue-400/20 hover:bg-blue-500/[0.05] hover:text-white/80"
+                    >
+                      <span
+                        className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-white/25 group-hover:text-blue-300/80"
+                        style={MONO}
+                      >
+                        {s.industry} · {s.target_market}
+                      </span>
+                      {s.idea}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Launching / redirecting phase ── */}
+          {isBuilding && (
+            <motion.div
+              className="flex flex-col items-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="relative mb-6">
+                <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/20" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-400/30 backdrop-blur-xl">
+                  <Zap className="h-7 w-7 text-blue-300" />
+                </div>
+              </div>
+
+              <h2
+                className="mb-1 text-lg font-bold text-white/90"
+                style={MONO}
+              >
+                {phase === "redirecting"
+                  ? "Taking you there…"
+                  : "Launching agents"}
+              </h2>
+              <p className="mb-2 text-sm text-white/40">
+                {phase === "redirecting"
+                  ? "Pipeline is running. Results appear as each agent finishes."
+                  : "9 specialized AI agents are being dispatched."}
+              </p>
+
+              <div className="mb-4 flex gap-2">
+                <span
+                  className="rounded-sm border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 text-[11px] text-blue-300"
+                  style={MONO}
+                >
+                  {industry}
+                </span>
+                <span
+                  className="rounded-sm border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-white/50"
+                  style={MONO}
+                >
+                  {stage}
+                </span>
+                <span
+                  className="rounded-sm border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-white/50"
+                  style={MONO}
+                >
+                  {budget}
+                </span>
+              </div>
+
+              <p className="mb-2 max-w-md rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-center text-[12px] leading-relaxed text-white/40 italic backdrop-blur-xl">
+                "{idea.length > 120 ? idea.slice(0, 120) + "…" : idea}"
+              </p>
+
+              <LaunchSequence activeIndex={launchStep} />
+            </motion.div>
+          )}
+        </div>
       </div>
     </AppShell>
   );
