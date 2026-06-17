@@ -108,7 +108,40 @@ export function usePipelineProgress(projectId: string | null) {
   useEffect(() => {
     if (status !== "done" || !data || !projectId || savedRef.current) return;
     savedRef.current = true;
-    // ... rest of your save logic unchanged
+    
+    const supabase = createClient();
+
+    const agentMap: Record<string, OutputKey> = {
+      planner:    "planner_output",
+      research:   "research_output",
+      competitor: "competitor_output",
+      product:    "product_output",
+      branding:   "branding_output",
+      finance:    "finance_output",
+      gtm:        "gtm_output",
+      pitch:      "pitch_output",
+    };
+
+    const inserts = Object.entries(agentMap)
+      .filter(([, outputKey]) => data[outputKey] != null)
+      .map(([agent, outputKey]) => ({
+        project_id: projectId,
+        agent,
+        output: data[outputKey],
+      }));
+
+    // Upsert in case of re-runs
+    supabase
+      .from("analysis_results")
+      .upsert(inserts, { onConflict: "project_id,agent" })
+      .then(() => {
+        // Mark project as completed
+        supabase
+          .from("projects")
+          .update({ status: "completed" })
+          .eq("id", projectId);
+      });
+      
   }, [status, data, projectId]);
 
   const completedAgents: string[] = data
