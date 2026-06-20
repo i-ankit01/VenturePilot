@@ -1,11 +1,12 @@
 import os
 from datetime import datetime, timezone
 from uuid import UUID
+from email.utils import parsedate_to_datetime
 
 from tavily import TavilyClient
 
 from agents import investor_agent
-from schemas.investor import InvestorRecord
+from schemas.investor import InvestorRecord, InvestorOverview, InvestorMessage, Meeting
 from services.supabase_client import get_supabase
 from integrations import google_auth, gmail_client, calendar_client
 
@@ -13,9 +14,7 @@ tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
 
 def _get_startup_context(project_id: str) -> dict:
-    """Fetch the planner agent's refined output for this project."""
     supabase = get_supabase()
-
     result = (
         supabase.table("analysis_results")
         .select("output")
@@ -24,15 +23,12 @@ def _get_startup_context(project_id: str) -> dict:
         .single()
         .execute()
     )
-
     if not result.data:
         raise ValueError(f"No planner output found for project {project_id}")
-
     return result.data["output"]
 
 
 def _search_tavily_candidates(startup_context: dict) -> list[dict]:
-    """Run targeted Tavily queries and return raw search hits."""
     industry = startup_context.get("industry", "")
     stage = startup_context.get("stage", "")
     geography = startup_context.get("geography", "")
@@ -44,32 +40,19 @@ def _search_tavily_candidates(startup_context: dict) -> list[dict]:
 
     raw_hits = []
     for query in queries:
-        response = tavily_client.search(
-            query=query,
-            search_depth="advanced",
-            max_results=8,
-        )
+        response = tavily_client.search(query=query, search_depth="advanced", max_results=8)
         for hit in response.get("results", []):
             raw_hits.append({
                 "title": hit.get("title"),
                 "url": hit.get("url"),
                 "content": hit.get("content"),
             })
-
     return raw_hits
 
 
 async def find_investors(project_id: str) -> list[InvestorRecord]:
-    """
-    Stage 1: search + score.
-      1. fetch startup context (planner output)
-      2. run Tavily searches
-      3. agent extracts + scores + ranks candidates
-      4. keep top 5-10, persist, return
-    """
     startup_context = _get_startup_context(project_id)
     raw_hits = _search_tavily_candidates(startup_context)
-
     scoring_response = investor_agent.score_investors(startup_context, raw_hits)
 
     ranked = sorted(
@@ -103,7 +86,6 @@ async def find_investors(project_id: str) -> list[InvestorRecord]:
     ]
 
     supabase = get_supabase()
-    # re-running search for a project replaces the previous shortlist
     supabase.table("investors").delete().eq("project_id", project_id).execute()
 
     insert_payload = [
@@ -111,11 +93,11 @@ async def find_investors(project_id: str) -> list[InvestorRecord]:
         for record in records
     ]
     inserted = supabase.table("investors").insert(insert_payload).execute()
-
     return [InvestorRecord(**row) for row in inserted.data]
 
 
 def get_investors(project_id: str) -> list[InvestorRecord]:
+    """Raw investors table - profile + score only, no outreach status."""
     supabase = get_supabase()
     result = (
         supabase.table("investors")
@@ -127,36 +109,56 @@ def get_investors(project_id: str) -> list[InvestorRecord]:
     return [InvestorRecord(**row) for row in result.data]
 
 
-async def generate_emails(project_id: str) -> list[InvestorRecord]:
-    """Stage 2: draft a personalized email for every investor on this project."""
-    startup_context = _get_startup_context(project_id)
-    investors = get_investors(project_id)
-
-    if not investors:
-        raise ValueError("No investors found for this project - run search first")
-
+def get_investor_overview(project_id: str) -> list[InvestorOverview]:
+    """For the dashboard - investors joined with outreach/meeting status."""
     supabase = get_supabase()
-    updated = []
-
-    for investor in investors:
-        draft = investor_agent.draft_investor_email(startup_context, investor)
-
-        result = (
-            supabase.table("investors")
-            .update({
-                "email_subject": draft.draft.subject,
-                "email_body": draft.draft.body,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            })
-            .eq("id", str(investor.id))
-            .execute()
-        )
-        updated.append(InvestorRecord(**result.data[0]))
-
-    return updated
+    result = (
+        supabase.table("investor_overview")
+        .select("*")
+        .eq("project_id", project_id)
+        .order("overall_score", desc=True)
+        .execute()
+    )
+    return [InvestorOverview(**row) for row in result.data]
 
 
-# gmail Oauth 
+def get_investor_thread(investor_id: str) -> list[InvestorMessage]:
+    """Full sent conversation for one investor, oldest to newest."""
+    return _get_thread(investor_id)
+
+
+def _get_thread(investor_id: str) -> list[InvestorMessage]:
+    supabase = get_supabase()
+    result = (
+        supabase.table("investor_messages")
+        .select("*")
+        .eq("investor_id", investor_id)
+        .eq("is_draft", False)
+        .order("sent_at")
+        .execute()
+    )
+    return [InvestorMessage(**row) for row in result.data]
+
+
+def _get_investor_draft(investor_id: str, direction: str = "outbound") -> InvestorMessage | None:
+    supabase = get_supabase()
+    result = (
+        supabase.table("investor_messages")
+        .select("*")
+        .eq("investor_id", investor_id)
+        .eq("direction", direction)
+        .eq("is_draft", True)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return InvestorMessage(**result.data[0]) if result.data else None
+
+def get_investor_draft(investor_id: str) -> InvestorMessage | None:
+    """Pending unsent outbound draft, if any - lets the frontend repopulate the edit box on reload."""
+    return _get_investor_draft(investor_id, direction="outbound")
+
+
 def _get_project_user_id(project_id: str) -> str:
     supabase = get_supabase()
     result = (
@@ -185,12 +187,47 @@ def _get_investor(investor_id: str) -> InvestorRecord:
     return InvestorRecord(**result.data)
 
 
+async def generate_emails(project_id: str) -> list[InvestorMessage]:
+    """Stage 2: draft a personalized first-touch email for every investor, persisted as a draft."""
+    startup_context = _get_startup_context(project_id)
+    investors = get_investors(project_id)
+
+    if not investors:
+        raise ValueError("No investors found for this project - run search first")
+
+    supabase = get_supabase()
+    drafts = []
+
+    for investor in investors:
+        draft = investor_agent.draft_investor_email(startup_context, investor)
+
+        # an investor only ever has one pending outbound draft at a time
+        supabase.table("investor_messages").delete() \
+            .eq("investor_id", str(investor.id)) \
+            .eq("direction", "outbound") \
+            .eq("is_draft", True) \
+            .execute()
+
+        result = supabase.table("investor_messages").insert({
+            "project_id": project_id,
+            "investor_id": str(investor.id),
+            "direction": "outbound",
+            "is_draft": True,
+            "subject": draft.draft.subject,
+            "body": draft.draft.body,
+            "drafted_by": "agent",
+        }).execute()
+        drafts.append(InvestorMessage(**result.data[0]))
+
+    return drafts
+
+
 async def send_investor_email(
     project_id: str,
     investor_id: str,
     subject: str,
     body: str,
-) -> InvestorRecord:
+) -> InvestorMessage:
     user_id = _get_project_user_id(project_id)
     creds = google_auth.get_credentials_for_user(user_id)
     investor = _get_investor(investor_id)
@@ -198,117 +235,194 @@ async def send_investor_email(
     if not subject or not body:
         raise ValueError("Subject and body are required to send an email")
 
-    sent = gmail_client.send_email(
-        creds, to=investor.email, subject=subject, body=body,
-    )
+    sent = gmail_client.send_email(creds, to=investor.email, subject=subject, body=body)
 
     supabase = get_supabase()
-    result = (
-        supabase.table("investors")
-        .update({
-            "email_subject": subject,
-            "email_body": body,
-            "email_sent": True,
-            "email_sent_at": datetime.now(timezone.utc).isoformat(),
-            "gmail_thread_id": sent["threadId"],
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+    draft = _get_investor_draft(investor_id, direction="outbound")
+    now = datetime.now(timezone.utc).isoformat()
+
+    payload = {
+        "subject": subject,
+        "body": body,
+        "is_draft": False,
+        "gmail_message_id": sent["id"],
+        "gmail_thread_id": sent["threadId"],
+        "sent_at": now,
+    }
+
+    if draft:
+        result = supabase.table("investor_messages").update(payload).eq("id", str(draft.id)).execute()
+    else:
+        payload.update({
+            "project_id": project_id,
+            "investor_id": investor_id,
+            "direction": "outbound",
+            "drafted_by": "human",
         })
-        .eq("id", investor_id)
-        .execute()
-    )
-    return InvestorRecord(**result.data[0])
+        result = supabase.table("investor_messages").insert(payload).execute()
+
+    supabase.table("investors").update({
+        "gmail_thread_id": sent["threadId"],
+        "updated_at": now,
+    }).eq("id", investor_id).execute()
+
+    return InvestorMessage(**result.data[0])
 
 
-
-async def check_replies(project_id: str) -> list[InvestorRecord]:
+async def check_replies(project_id: str) -> list[InvestorMessage]:
+    """Pure sync - pulls new inbound messages from Gmail into investor_messages. No LLM here."""
     user_id = _get_project_user_id(project_id)
     creds = google_auth.get_credentials_for_user(user_id)
     my_email = gmail_client.get_profile_email(creds)
 
     supabase = get_supabase()
-    updated = []
+    new_messages = []
 
     for investor in get_investors(project_id):
-        if not investor.gmail_thread_id or investor.reply_received:
+        if not investor.gmail_thread_id:
             continue
 
-        messages = gmail_client.get_thread_messages(creds, investor.gmail_thread_id)
-        if len(messages) < 2:
-            continue
+        thread_messages = gmail_client.get_thread_messages(creds, investor.gmail_thread_id)
 
-        latest = messages[-1]
-        if my_email in gmail_client.get_header(latest, "From"):
-            continue  # latest message is still ours
-
-        reply_text = gmail_client.extract_message_text(latest)
-
-        result = (
-            supabase.table("investors")
-            .update({
-                "reply_received": reply_text,
-                "reply_received_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            })
-            .eq("id", str(investor.id))
+        existing = (
+            supabase.table("investor_messages")
+            .select("gmail_message_id")
+            .eq("investor_id", str(investor.id))
             .execute()
         )
-        updated.append(InvestorRecord(**result.data[0]))
+        known_ids = {row["gmail_message_id"] for row in existing.data if row["gmail_message_id"]}
 
-    return updated
+        for msg in thread_messages:
+            gmail_id = msg["id"]
+            if gmail_id in known_ids:
+                continue
+            if my_email in gmail_client.get_header(msg, "From"):
+                continue  # our own sent message, already tracked when we sent it
+
+            date_header = gmail_client.get_header(msg, "Date")
+            try:
+                sent_at = parsedate_to_datetime(date_header).astimezone(timezone.utc).isoformat()
+            except (TypeError, ValueError):
+                sent_at = datetime.now(timezone.utc).isoformat()
+
+            result = supabase.table("investor_messages").insert({
+                "project_id": project_id,
+                "investor_id": str(investor.id),
+                "direction": "inbound",
+                "is_draft": False,
+                "subject": gmail_client.get_header(msg, "Subject"),
+                "body": gmail_client.extract_message_text(msg),
+                "gmail_message_id": gmail_id,
+                "gmail_thread_id": investor.gmail_thread_id,
+                "sent_at": sent_at,
+            }).execute()
+            new_messages.append(InvestorMessage(**result.data[0]))
+
+    return new_messages
 
 
-async def generate_reply(project_id: str, investor_id: str) -> InvestorRecord:
+async def generate_reply(project_id: str, investor_id: str) -> dict:
+    """
+    Drafts the next reply using the FULL thread as context. If the investor's
+    latest message named a concrete day/time, this skips the draft/review step
+    entirely - it schedules the meeting and sends the confirmation right away.
+    """
     startup_context = _get_startup_context(project_id)
     investor = _get_investor(investor_id)
+    thread = _get_thread(investor_id)
 
-    if not investor.reply_received:
+    inbound = [m for m in thread if m.direction == "inbound"]
+    if not inbound:
         raise ValueError("No reply received yet for this investor")
+    latest_inbound = inbound[-1]
 
-    draft = investor_agent.draft_reply(startup_context, investor, investor.reply_received)
+    draft = investor_agent.draft_reply(startup_context, investor, thread)
 
     supabase = get_supabase()
-    result = (
-        supabase.table("investors")
-        .update({
-            "reply_draft": draft.draft.body,
-            "reply_sentiment": draft.sentiment,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        })
-        .eq("id", investor_id)
-        .execute()
-    )
-    return InvestorRecord(**result.data[0])
+    supabase.table("investor_messages").update({
+        "sentiment": draft.sentiment,
+        "proposed_start": draft.proposed_meeting.start_time.isoformat() if draft.proposed_meeting else None,
+        "proposed_end": draft.proposed_meeting.end_time.isoformat() if draft.proposed_meeting else None,
+    }).eq("id", str(latest_inbound.id)).execute()
+
+    if draft.proposed_meeting and draft.proposed_meeting.confidence == "high":
+        meeting = await schedule_meeting(
+            project_id=project_id,
+            investor_id=investor_id,
+            start_time=draft.proposed_meeting.start_time.isoformat(),
+            end_time=draft.proposed_meeting.end_time.isoformat(),
+            timezone_str=draft.proposed_meeting.timezone,
+            source_message_id=str(latest_inbound.id),
+            scheduled_via="agent",
+        )
+        sent_message = await send_investor_reply(
+            project_id, investor_id, body=draft.draft.body, drafted_by="agent",
+        )
+        return {"auto_scheduled": True, "meeting": meeting, "message": sent_message}
+
+    # no concrete time yet - leave a normal draft for human review
+    supabase.table("investor_messages").delete() \
+        .eq("investor_id", investor_id).eq("direction", "outbound").eq("is_draft", True).execute()
+
+    result = supabase.table("investor_messages").insert({
+        "project_id": project_id,
+        "investor_id": investor_id,
+        "direction": "outbound",
+        "is_draft": True,
+        "subject": f"Re: {latest_inbound.subject}" if latest_inbound.subject else None,
+        "body": draft.draft.body,
+        "drafted_by": "agent",
+    }).execute()
+
+    return {"auto_scheduled": False, "message": InvestorMessage(**result.data[0])}
 
 
-async def send_investor_reply(project_id: str, investor_id: str, body: str | None = None) -> InvestorRecord:
+async def send_investor_reply(
+    project_id: str,
+    investor_id: str,
+    body: str | None = None,
+    drafted_by: str = "human",
+) -> InvestorMessage:
     user_id = _get_project_user_id(project_id)
     creds = google_auth.get_credentials_for_user(user_id)
     investor = _get_investor(investor_id)
 
-    reply_body = body or investor.reply_draft
+    draft = _get_investor_draft(investor_id, direction="outbound")
+    reply_body = body or (draft.body if draft else None)
     if not reply_body:
         raise ValueError("No reply draft to send")
 
     thread_messages = gmail_client.get_thread_messages(creds, investor.gmail_thread_id)
     original_message_id = gmail_client.get_header(thread_messages[0], "Message-ID")
+    last_subject = gmail_client.get_header(thread_messages[-1], "Subject") or "your message"
 
-    gmail_client.send_email(
+    sent = gmail_client.send_email(
         creds,
         to=investor.email,
-        subject=f"Re: {investor.email_subject}",
+        subject=f"Re: {last_subject}",
         body=reply_body,
         thread_id=investor.gmail_thread_id,
         in_reply_to_message_id=original_message_id,
     )
 
     supabase = get_supabase()
-    result = (
-        supabase.table("investors")
-        .update({"reply_sent": True, "updated_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", investor_id)
-        .execute()
-    )
-    return InvestorRecord(**result.data[0])
+    payload = {
+        "subject": f"Re: {last_subject}",
+        "body": reply_body,
+        "is_draft": False,
+        "gmail_message_id": sent["id"],
+        "gmail_thread_id": investor.gmail_thread_id,
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "drafted_by": drafted_by,
+    }
+
+    if draft:
+        result = supabase.table("investor_messages").update(payload).eq("id", str(draft.id)).execute()
+    else:
+        payload.update({"project_id": project_id, "investor_id": investor_id, "direction": "outbound"})
+        result = supabase.table("investor_messages").insert(payload).execute()
+
+    return InvestorMessage(**result.data[0])
 
 
 async def schedule_meeting(
@@ -317,13 +431,15 @@ async def schedule_meeting(
     start_time: str,
     end_time: str,
     timezone_str: str = "Asia/Kolkata",
-) -> InvestorRecord:
+    source_message_id: str | None = None,
+    scheduled_via: str = "human",
+) -> Meeting:
     user_id = _get_project_user_id(project_id)
     creds = google_auth.get_credentials_for_user(user_id)
     investor = _get_investor(investor_id)
     startup_context = _get_startup_context(project_id)
 
-    meeting = calendar_client.create_meeting(
+    event = calendar_client.create_meeting(
         creds,
         summary=f"{startup_context.get('refined_idea', 'Intro call')} <> {investor.firm}",
         description=f"Intro call: {startup_context.get('one_liner', '')} — {investor.name} ({investor.firm})",
@@ -334,15 +450,17 @@ async def schedule_meeting(
     )
 
     supabase = get_supabase()
-    result = (
-        supabase.table("investors")
-        .update({
-            "meeting_scheduled": True,
-            "meet_link": meeting["meet_link"],
-            "meeting_time": start_time,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        })
-        .eq("id", investor_id)
-        .execute()
-    )
-    return InvestorRecord(**result.data[0])
+    result = supabase.table("meetings").insert({
+        "project_id": project_id,
+        "investor_id": investor_id,
+        "source_message_id": source_message_id,
+        "google_event_id": event.get("event_id"),
+        "meet_link": event["meet_link"],
+        "start_time": start_time,
+        "end_time": end_time,
+        "timezone": timezone_str,
+        "status": "scheduled",
+        "scheduled_via": scheduled_via,
+    }).execute()
+
+    return Meeting(**result.data[0])

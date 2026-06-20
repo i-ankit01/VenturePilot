@@ -14,6 +14,7 @@ from schemas.investor import (
     EmailDraftResponse,
     ReplyDraftResponse,
     InvestorRecord,
+    InvestorMessage,
 )
 
 client = OpenAI()
@@ -104,39 +105,52 @@ def draft_investor_email(startup_context: dict, investor: InvestorRecord) -> Ema
     return completion.choices[0].message.parsed
 
 
-REPLY_SYSTEM_PROMPT = """You are a startup founder's outreach assistant. An \
-investor has replied to an outreach email. Read their message and draft a \
-reply.
+REPLY_SYSTEM_PROMPT = """You are a startup founder's outreach assistant. You're given the full \
+email conversation with one investor so far, oldest to newest, and need to draft the next reply.
 
-- Classify sentiment: "positive" (wants to talk), "neutral" (polite \
-  non-committal), "negative" (declining), or "needs_info" (asking a \
-  question before deciding).
-- Draft accordingly:
-  - positive: thank them, propose 2-3 time slots for a call, keep it short
-  - neutral: gently re-engage, offer to share more materials
-  - negative: thank them graciously, no pressure, leave the door open
-  - needs_info: directly answer using the startup context, then offer a call
-- Match the tone of the original outreach - confident, concise, human.
-- Sign off with [Your Name]"""
+1. sentiment: classify the investor's LATEST message only - "positive" (wants to talk), \
+   "neutral" (polite non-committal), "negative" (declining), or "needs_info" (asking a question \
+   before deciding).
+
+2. proposed_meeting: only set this if the investor's LATEST message names a specific day AND \
+   time (e.g. "Tuesday 3pm", "June 25th morning") - not just "let's hop on a call". Assume a \
+   30-minute meeting unless stated otherwise, and Asia/Kolkata timezone unless the investor named \
+   another. confidence is "high" only when both day and time are unambiguous. Otherwise return null.
+
+3. draft: write the next reply.
+   - positive/neutral, no proposed_meeting: thank them, then ALWAYS offer 2-3 concrete time slots \
+     over the next few business days - never just ask "when works for you" with nothing offered. \
+     Keep pushing the conversation toward an actual booked call.
+   - positive/neutral, proposed_meeting extracted with high confidence: confirm that exact time \
+     back to them and mention a calendar invite with a Meet link is on its way. Don't ask them to \
+     pick again.
+   - needs_info: answer directly using the startup context, then still offer to schedule a call.
+   - negative: thank them graciously, no pressure, leave the door open. No meeting push here.
+   - Match the tone of the prior messages in the thread - confident, concise, human.
+   - Sign off with [Your Name]"""
 
 
 def draft_reply(
     startup_context: dict,
     investor: InvestorRecord,
-    incoming_message: str,
+    thread: list[InvestorMessage],
 ) -> ReplyDraftResponse:
+    transcript = [
+        {
+            "from": "founder" if m.direction == "outbound" else "investor",
+            "subject": m.subject,
+            "body": m.body,
+            "sent_at": m.sent_at.isoformat() if m.sent_at else None,
+        }
+        for m in thread
+    ]
+
     user_content = {
         "startup": startup_context,
         "investor": {"name": investor.name, "firm": investor.firm},
-        "original_email": {
-            "subject": investor.email_subject,
-            "body": investor.email_body,
-        },
-        "incoming_reply": 
-        
-        incoming_message,
+        "conversation_so_far_oldest_to_newest": transcript,
     }
-    
+
     completion = client.beta.chat.completions.parse(
         model=MODEL,
         messages=[

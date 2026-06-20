@@ -33,27 +33,32 @@ async def search_investors(project_id: str):
 
 @router.get("/{project_id}")
 async def list_investors(project_id: str):
-    investors = investor_service.get_investors(project_id)
+    # now includes email_sent / last_reply_sentiment / meeting_scheduled / upcoming_meeting_time
+    investors = investor_service.get_investor_overview(project_id)
     return {"investors": investors}
+
+
+@router.get("/{project_id}/{investor_id}/messages")
+async def get_investor_messages(project_id: str, investor_id: str):
+    messages = investor_service.get_investor_thread(investor_id)
+    return {"messages": messages}
+
+
+@router.get("/{project_id}/{investor_id}/draft")
+async def get_investor_draft(project_id: str, investor_id: str):
+    draft = investor_service.get_investor_draft(investor_id)
+    return {"draft": draft}
 
 
 @router.post("/{project_id}/generate-emails")
 async def generate_emails(project_id: str):
     try:
-        investors = await investor_service.generate_emails(project_id)
+        drafts = await investor_service.generate_emails(project_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {"investors": investors}
-
-# @router.post("/{project_id}/{investor_id}/send-email")
-# async def send_email(project_id: str, investor_id: str):
-#     try:
-#         return await investor_service.send_investor_email(project_id, investor_id)
-#     except ValueError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
+    return {"drafts": drafts}
 
 
-# so that user can edit the body before sending 
 @router.post("/{project_id}/{investor_id}/send-email")
 async def send_email(project_id: str, investor_id: str, payload: SendEmailRequest):
     try:
@@ -65,15 +70,16 @@ async def send_email(project_id: str, investor_id: str, payload: SendEmailReques
 @router.get("/{project_id}/check-replies")
 async def check_replies(project_id: str):
     try:
-        updated = await investor_service.check_replies(project_id)
+        new_messages = await investor_service.check_replies(project_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {"updated": updated}
+    return {"new_messages": new_messages}
 
 
 @router.post("/{project_id}/{investor_id}/generate-reply")
 async def generate_reply(project_id: str, investor_id: str):
     try:
+        # {"auto_scheduled": bool, "meeting"?: Meeting, "message": InvestorMessage}
         return await investor_service.generate_reply(project_id, investor_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -92,6 +98,7 @@ async def schedule_meeting(project_id: str, investor_id: str, payload: ScheduleM
     try:
         return await investor_service.schedule_meeting(
             project_id, investor_id, payload.start_time, payload.end_time, payload.timezone,
+            scheduled_via="human",
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
