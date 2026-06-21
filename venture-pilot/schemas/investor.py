@@ -57,9 +57,10 @@ class InvestorRecord(BaseModel):
     updated_at: datetime | None = None
 
 
+# schemas/investor.py — add one field to InvestorOverview
 class InvestorOverview(InvestorRecord):
-    """Row shape from the `investor_overview` view - investors + computed outreach status."""
     email_sent: bool = False
+    has_draft: bool = False
     last_outbound_at: datetime | None = None
     last_inbound_at: datetime | None = None
     last_reply_sentiment: Literal["positive", "neutral", "negative", "needs_info"] | None = None

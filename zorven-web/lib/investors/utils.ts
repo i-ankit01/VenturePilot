@@ -1,11 +1,15 @@
-import type { InvestorRecord, InvestorStage } from "./types";
+import type { InvestorOverview, InvestorStage } from "./types";
 
-export function getInvestorStage(investor: InvestorRecord): InvestorStage {
+export function getInvestorStage(investor: InvestorOverview): InvestorStage {
   if (investor.meeting_scheduled) return "scheduled";
-  if (investor.reply_sent) return "reply_sent";
-  if (investor.reply_received) return "replied";
+
+  const lastIn = investor.last_inbound_at ? new Date(investor.last_inbound_at).getTime() : null;
+  const lastOut = investor.last_outbound_at ? new Date(investor.last_outbound_at).getTime() : null;
+
+  if (lastIn !== null && lastOut !== null && lastOut > lastIn) return "reply_sent"; // we replied after their last message
+  if (lastIn !== null) return "replied"; // they replied, awaiting our follow-up
   if (investor.email_sent) return "sent";
-  if (investor.email_body) return "drafted";
+  if (investor.has_draft) return "drafted";
   return "matched";
 }
 

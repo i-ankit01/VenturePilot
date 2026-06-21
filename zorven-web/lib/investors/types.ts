@@ -1,4 +1,7 @@
 export type ReplySentiment = "positive" | "neutral" | "negative" | "needs_info";
+export type MessageDirection = "outbound" | "inbound";
+export type DraftedBy = "agent" | "human";
+export type MeetingStatus = "scheduled" | "cancelled" | "completed" | "rescheduled";
 
 export interface InvestorRecord {
   id: string;
@@ -17,21 +20,60 @@ export interface InvestorRecord {
   thesis_alignment: number;
   reasoning: string[];
   relevant_signal: string | null;
-  email_subject: string | null;
-  email_body: string | null;
-  email_sent: boolean;
-  email_sent_at: string | null;
   gmail_thread_id: string | null;
-  reply_received: string | null;
-  reply_received_at: string | null;
-  reply_draft: string | null;
-  reply_sentiment: ReplySentiment | null;
-  reply_sent: boolean;
-  meeting_scheduled: boolean;
-  meet_link: string | null;
-  meeting_time: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface InvestorOverview extends InvestorRecord {
+  email_sent: boolean;
+  has_draft: boolean;
+  last_outbound_at: string | null;
+  last_inbound_at: string | null;
+  last_reply_sentiment: ReplySentiment | null;
+  meeting_scheduled: boolean;
+  upcoming_meet_link: string | null;
+  upcoming_meeting_time: string | null;
+}
+
+export interface InvestorMessage {
+  id: string;
+  project_id: string;
+  investor_id: string;
+  direction: MessageDirection;
+  is_draft: boolean;
+  subject: string | null;
+  body: string;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  sentiment: ReplySentiment | null;
+  drafted_by: DraftedBy;
+  proposed_start: string | null;
+  proposed_end: string | null;
+  sent_at: string | null;
+  created_at: string | null;
+}
+
+export interface Meeting {
+  id: string;
+  project_id: string;
+  investor_id: string;
+  source_message_id: string | null;
+  google_event_id: string | null;
+  meet_link: string | null;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  status: MeetingStatus;
+  scheduled_via: DraftedBy;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface GenerateReplyResult {
+  auto_scheduled: boolean;
+  meeting?: Meeting;
+  message: InvestorMessage;
 }
 
 export type InvestorStage =
