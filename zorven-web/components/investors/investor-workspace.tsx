@@ -29,8 +29,18 @@ export function InvestorWorkspace({ project, userId, gmailConnected }: InvestorW
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/10" />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-400/20">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-300" />
+            </div>
+          </div>
+          <p className="text-[12px] text-white/30" style={{ fontFamily: "'DM Mono', monospace" }}>
+            Loading investors…
+          </p>
+        </div>
       </div>
     );
   }
@@ -48,7 +58,7 @@ export function InvestorWorkspace({ project, userId, gmailConnected }: InvestorW
       />
 
       {error && (
-        <div className="rounded-lg border border-[oklch(0.66_0.21_25)]/30 bg-[oklch(0.66_0.21_25)]/8 px-4 py-3 text-sm text-[oklch(0.66_0.21_25)]">
+        <div className="flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 backdrop-blur-xl">
           {error}
         </div>
       )}
