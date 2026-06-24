@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Building2, CalendarCheck, ExternalLink, Mail, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft, Building2, CalendarCheck, ExternalLink,
+  Mail, RefreshCw, Loader2
+} from "lucide-react";
+import {
+  IconChevronRight, IconBriefcase, IconMailCheck,
+  IconMailFast, IconCalendarCheck, IconMessage2Check, IconUserCheck
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/lib/investors/types";
 import { getInvestorStage, getScoreColor, STAGE_LABELS, formatDateTime } from "@/lib/investors/utils";
@@ -14,17 +19,83 @@ import { EmailDraftPanel } from "./email-draft-panel";
 import { ReplyPanel } from "./reply-panel";
 import { MeetingScheduler } from "./meeting-scheduler";
 import { ConversationDialog } from "./conversation-dialog";
-import { Loader2 } from "lucide-react";
 
-const STAGE_PILL: Record<string, string> = {
-  matched:    "bg-muted text-muted-foreground",
-  drafted:    "bg-secondary text-secondary-foreground",
-  sent:       "bg-primary/10 text-primary",
-  replied:    "bg-[oklch(0.72_0.19_152)]/10 text-[oklch(0.72_0.19_152)]",
-  reply_sent: "bg-[oklch(0.72_0.19_152)]/10 text-[oklch(0.72_0.19_152)]",
-  scheduled:  "bg-[oklch(0.78_0.16_85)]/10 text-[oklch(0.78_0.16_85)]",
+const MONO = { fontFamily: "'DM Mono', monospace" };
+
+// ─── Stage config ─────────────────────────────────────────────────────────────
+const STAGE_CONFIG: Record<string, { pill: string; icon: React.ElementType }> = {
+  matched:    { pill: "border-white/[0.08]    bg-white/[0.03]       text-white/40",      icon: IconUserCheck },
+  drafted:    { pill: "border-sky-400/20      bg-sky-500/[0.08]     text-sky-300",       icon: IconMailFast },
+  sent:       { pill: "border-blue-400/20     bg-blue-500/[0.08]    text-blue-300",      icon: IconMailCheck },
+  replied:    { pill: "border-emerald-400/20  bg-emerald-500/[0.08] text-emerald-300",   icon: IconMessage2Check },
+  reply_sent: { pill: "border-emerald-400/20  bg-emerald-500/[0.08] text-emerald-300",   icon: IconMessage2Check },
+  scheduled:  { pill: "border-amber-400/20    bg-amber-500/[0.08]   text-amber-300",     icon: IconCalendarCheck },
 };
 
+// ─── Deterministic monogram avatar (same as investor-list-card) ───────────────
+function nameToHue(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return 200 + (Math.abs(h) % 40);
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function MonogramAvatar({ name, size = "lg" }: { name: string; size?: "sm" | "lg" }) {
+  const hue = nameToHue(name);
+  const bg     = `hsla(${hue}, 70%, 55%, 0.12)`;
+  const border = `hsla(${hue}, 70%, 65%, 0.30)`;
+  const text   = `hsla(${hue}, 90%, 82%, 1)`;
+  const glow   = `hsla(${hue}, 80%, 60%, 0.35)`;
+  const bloom  = `hsla(${hue}, 70%, 55%, 0.15)`;
+
+  if (size === "lg") {
+    return (
+      <div className="relative">
+        {/* Bloom glow behind avatar */}
+        <div
+          className="absolute inset-0 rounded-full blur-[24px] scale-150"
+          style={{ background: bloom }}
+        />
+        <div
+          className="relative flex h-16 w-16 items-center justify-center rounded-full text-[22px] font-bold"
+          style={{ ...MONO, background: bg, border: `2px solid ${border}`, color: text, boxShadow: `0 0 20px ${glow}` }}
+        >
+          {initials(name)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+      style={{ ...MONO, background: bg, border: `1.5px solid ${border}`, color: text }}
+    >
+      {initials(name)}
+    </div>
+  );
+}
+
+// ─── Section label ────────────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-white/30" style={MONO}>
+      {children}
+    </p>
+  );
+}
+
+// ─── Panel divider ────────────────────────────────────────────────────────────
+function Divider() {
+  return <div className="h-px bg-white/[0.05]" />;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 interface Props {
   project: ProjectSummary;
   projectId: string;
@@ -33,68 +104,71 @@ interface Props {
 
 export function InvestorDetailWorkspace({ project, projectId, investorId }: Props) {
   const {
-    investor,
-    thread,
-    draft,
-    replyDraft,
-    latestInbound,
-    loading,
-    error,
-    autoScheduledBanner,
-    isPending,
-    sendEmail,
-    generateReply,
-    sendReply,
-    scheduleMeeting,
+    investor, thread, draft, replyDraft, latestInbound,
+    loading, error, autoScheduledBanner, isPending,
+    sendEmail, generateReply, sendReply, scheduleMeeting,
   } = useInvestorDetail(projectId, investorId);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
+        <div className="relative">
+          <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/10" />
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-400/20">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-300" />
+          </div>
+        </div>
+        <p className="text-[12px] text-white/30" style={MONO}>Loading investor…</p>
       </div>
     );
   }
 
   if (!investor) {
     return (
-      <div className="flex flex-col items-center gap-3 py-32 text-center">
-        <p className="text-sm text-muted-foreground">Investor not found.</p>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/investors/${projectId}`}>Back to list</Link>
-        </Button>
+      <div className="flex flex-col items-center gap-4 py-32 text-center">
+        <p className="text-sm text-white/40">Investor not found.</p>
+        <Link
+          href={`/investors/${projectId}`}
+          className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm text-white/60 backdrop-blur-xl transition-all hover:border-white/20 hover:text-white/80"
+          style={MONO}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to list
+        </Link>
       </div>
     );
   }
 
   const stage      = getInvestorStage(investor);
   const scoreColor = getScoreColor(investor.overall_score);
+  const cfg        = STAGE_CONFIG[stage] ?? STAGE_CONFIG["matched"];
+  const StageIcon  = cfg.icon;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-6xl px-6 py-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="mb-6 flex items-center gap-2 text-sm text-white/40">
         <Link
           href={`/investors/${projectId}`}
-          className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+          className="flex items-center gap-1.5 transition-colors hover:text-white/80"
         >
-          <ArrowLeft className="size-3.5" />
-          {project.title}
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>{project.title}</span>
         </Link>
-        <span>/</span>
-        <span className="text-foreground">{investor.name}</span>
+        <IconChevronRight className="h-3.5 w-3.5 text-white/20" />
+        <span className="text-white/70">{investor.name}</span>
       </div>
 
       {/* Auto-scheduled banner */}
       {autoScheduledBanner && (
-        <div className="flex items-center gap-2 rounded-lg border border-[oklch(0.78_0.16_85)]/30 bg-[oklch(0.78_0.16_85)]/8 px-4 py-3 text-sm text-[oklch(0.78_0.16_85)]">
-          <CalendarCheck className="size-4 shrink-0" />
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-300 backdrop-blur-xl">
+          <CalendarCheck className="h-4 w-4 shrink-0" />
           Meeting automatically scheduled — the investor proposed a time and a confirmation was sent.
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-[oklch(0.66_0.21_25)]/30 bg-[oklch(0.66_0.21_25)]/8 px-4 py-3 text-sm text-[oklch(0.66_0.21_25)]">
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 backdrop-blur-xl">
           {error}
         </div>
       )}
@@ -102,151 +176,163 @@ export function InvestorDetailWorkspace({ project, projectId, investorId }: Prop
       {/* Split layout */}
       <div className="grid gap-6 lg:grid-cols-[2fr_3fr] lg:items-start">
 
-        {/* ── Left: Profile panel ──────────────────────────────────── */}
-        <div className="space-y-0 rounded-xl border border-border bg-card lg:sticky lg:top-6">
+        {/* ── Left: Profile panel ── */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl lg:sticky lg:top-6">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent" />
 
-          {/* Header: avatar + name */}
-          <div className="flex items-start gap-4 p-5">
+          {/* Hero header */}
+          <div className="relative overflow-hidden px-6 pb-6 pt-7">
+            {/* Background tint matching avatar hue */}
             <div
-              className="flex size-12 shrink-0 items-center justify-center rounded-full text-lg font-bold"
-              style={{
-                background: `color-mix(in oklch, ${scoreColor} 15%, transparent)`,
-                color: scoreColor,
-                border: `2px solid color-mix(in oklch, ${scoreColor} 30%, transparent)`,
-              }}
-            >
-              {investor.name[0]}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base font-semibold leading-tight">{investor.name}</h1>
-              <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Building2 className="size-3.5 shrink-0" />
-                <span className="truncate">{investor.firm}</span>
-                {investor.title && (
-                  <span className="shrink-0 text-muted-foreground/60">· {investor.title}</span>
-                )}
-              </div>
-              <div className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground/60">
-                <Mail className="size-3 shrink-0" />
-                <span className="truncate">{investor.email}</span>
+              className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30"
+              style={{ background: `linear-gradient(to bottom, hsla(${nameToHue(investor.name)}, 60%, 50%, 0.12), transparent)` }}
+            />
+            <div className="relative z-10 flex items-start gap-4">
+              <MonogramAvatar name={investor.name} size="lg" />
+              <div className="min-w-0 flex-1 pt-1">
+                <h1
+                  className="text-[18px] font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white/95 to-white/50"
+                  style={MONO}
+                >
+                  {investor.name}
+                </h1>
+                <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-white/45">
+                  <IconBriefcase className="h-3.5 w-3.5 shrink-0 text-white/30" />
+                  <span className="truncate">{investor.firm}</span>
+                  {investor.title && (
+                    <span className="shrink-0 text-white/25">· {investor.title}</span>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-white/30">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{investor.email}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <Separator />
+          <Divider />
 
-          {/* Score */}
-          <div className="flex items-center justify-between px-5 py-4">
-            <div className="space-y-2.5 flex-1">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Match score
-              </p>
-              <ScoreBreakdownBars
-                sectorFit={investor.sector_fit}
-                stageFit={investor.stage_fit}
-                thesisAlignment={investor.thesis_alignment}
-              />
+          {/* Score section */}
+          <div className="px-6 py-5">
+            <SectionLabel>Match score</SectionLabel>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <ScoreBreakdownBars
+                  sectorFit={investor.sector_fit}
+                  stageFit={investor.stage_fit}
+                  thesisAlignment={investor.thesis_alignment}
+                />
+              </div>
+              <MatchScoreGauge score={investor.overall_score} />
             </div>
-            <MatchScoreGauge score={investor.overall_score} />
           </div>
-
-          <Separator />
 
           {/* Bio */}
           {investor.bio && (
             <>
-              <div className="px-5 py-4">
-                <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Bio
-                </p>
-                <p className="text-sm leading-relaxed text-muted-foreground">{investor.bio}</p>
+              <Divider />
+              <div className="px-6 py-5">
+                <SectionLabel>Bio</SectionLabel>
+                <p className="text-sm leading-relaxed text-white/55">{investor.bio}</p>
               </div>
-              <Separator />
             </>
           )}
 
           {/* Focus + stages */}
           {(investor.focus_areas.length > 0 || investor.investment_stages.length > 0) && (
             <>
-              <div className="px-5 py-4">
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Focus
-                </p>
+              <Divider />
+              <div className="px-6 py-5">
+                <SectionLabel>Focus</SectionLabel>
                 <div className="flex flex-wrap gap-1.5">
                   {investor.investment_stages.map((s) => (
-                    <span key={s} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
+                    <span
+                      key={s}
+                      className="rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-2.5 py-0.5 text-[11px] font-medium text-blue-300/80"
+                      style={MONO}
+                    >
                       {s}
                     </span>
                   ))}
                   {investor.focus_areas.map((f) => (
-                    <span key={f} className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
+                    <span
+                      key={f}
+                      className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-0.5 text-[11px] text-white/45"
+                    >
                       {f}
                     </span>
                   ))}
                 </div>
               </div>
-              <Separator />
             </>
           )}
 
           {/* Reasoning */}
           {investor.reasoning.length > 0 && (
             <>
-              <div className="px-5 py-4">
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Why this match
-                </p>
-                <ul className="space-y-1.5">
+              <Divider />
+              <div className="px-6 py-5">
+                <SectionLabel>Why this match</SectionLabel>
+                <ul className="space-y-2">
                   {investor.reasoning.map((point, i) => (
-                    <li key={i} className="text-sm leading-snug text-muted-foreground">
-                      · {point}
+                    <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-white/55">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-blue-400/50" />
+                      {point}
                     </li>
                   ))}
                 </ul>
               </div>
-              {investor.relevant_signal && <Separator />}
             </>
           )}
 
           {/* Relevant signal */}
           {investor.relevant_signal && (
-            <div className="px-5 py-4">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Recent signal
-              </p>
-              <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-sm leading-relaxed text-foreground/80">
-                {investor.relevant_signal}
+            <>
+              <Divider />
+              <div className="px-6 py-5">
+                <SectionLabel>Recent signal</SectionLabel>
+                <div className="rounded-xl border border-blue-400/10 bg-blue-500/[0.05] p-4 text-sm leading-relaxed text-white/60">
+                  {investor.relevant_signal}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Source link */}
           {investor.source_url && (
             <>
-              <Separator />
-              <div className="px-5 py-3">
+              <Divider />
+              <div className="px-6 py-4">
                 <a
                   href={investor.source_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  className="group flex items-center gap-1.5 text-[12px] text-white/35 transition-colors hover:text-blue-300"
                 >
-                  <ExternalLink className="size-3" />
-                  Source
+                  <ExternalLink className="h-3 w-3" />
+                  View source
                 </a>
               </div>
             </>
           )}
         </div>
 
-        {/* ── Right: Outreach panel ────────────────────────────────── */}
+        {/* ── Right: Outreach panel ── */}
         <div className="space-y-4">
 
-          {/* Panel header */}
+          {/* Outreach header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <h2 className="text-sm font-semibold">Outreach</h2>
-              <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", STAGE_PILL[stage])}>
+              <h2 className="text-[15px] font-semibold text-white/90" style={MONO}>Outreach</h2>
+              <span
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                  cfg.pill
+                )}
+                style={MONO}
+              >
+                <StageIcon className="h-3 w-3" />
                 {STAGE_LABELS[stage]}
               </span>
             </div>
@@ -254,16 +340,26 @@ export function InvestorDetailWorkspace({ project, projectId, investorId }: Prop
           </div>
 
           {/* Stage-dependent content */}
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl p-6">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent" />
+
             {stage === "matched" && (
-              <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
-                <Mail className="size-8 opacity-30" />
-                <p className="text-sm">No email drafted yet.</p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/investors/${projectId}`}>
-                    Generate emails from the investor list
-                  </Link>
-                </Button>
+              <div className="flex flex-col items-center gap-4 py-10 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.04] ring-1 ring-white/[0.08]">
+                  <Mail className="h-6 w-6 text-white/25" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white/70" style={MONO}>No email drafted yet</p>
+                  <p className="mt-1 text-[12px] text-white/35">Generate emails from the investor list to get started.</p>
+                </div>
+                <Link
+                  href={`/investors/${projectId}`}
+                  className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-[13px] text-white/55 backdrop-blur-xl transition-all hover:border-white/20 hover:text-white/80"
+                  style={MONO}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back to investor list
+                </Link>
               </div>
             )}
 
@@ -277,30 +373,29 @@ export function InvestorDetailWorkspace({ project, projectId, investorId }: Prop
             )}
 
             {stage === "sent" && (
-              <div className="space-y-3">
-                <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-between">
-                    <span>
-                      Sent{investor.last_outbound_at
-                        ? ` on ${new Date(investor.last_outbound_at).toLocaleString()}`
-                        : ""}
-                    </span>
-                    <span className="flex items-center gap-1 font-mono text-[11px]">
-                      <RefreshCw className="size-3 animate-spin [animation-duration:3s]" />
-                      Watching for reply
-                    </span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.015] px-4 py-3">
+                  <div className="flex items-center gap-2 text-[12px] text-white/50" style={MONO}>
+                    <IconMailCheck className="h-4 w-4 text-blue-300/70" />
+                    Sent{investor.last_outbound_at
+                      ? ` · ${new Date(investor.last_outbound_at).toLocaleString()}`
+                      : ""}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-white/30" style={MONO}>
+                    <RefreshCw className="h-3 w-3 animate-spin [animation-duration:3s]" />
+                    Watching for reply
                   </div>
                 </div>
 
                 {thread.length > 0 && thread[0].body && (
-                  <div className="rounded-lg border border-border/60 bg-muted/10 p-4">
-                    <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Sent email
-                    </p>
+                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.015] p-5">
+                    <SectionLabel>Sent email</SectionLabel>
                     {thread[0].subject && (
-                      <p className="mb-2 text-sm font-medium">{thread[0].subject}</p>
+                      <p className="mb-3 text-[13px] font-semibold text-white/80" style={MONO}>
+                        {thread[0].subject}
+                      </p>
                     )}
-                    <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-relaxed text-white/50">
                       {thread[0].body}
                     </p>
                   </div>
@@ -322,21 +417,26 @@ export function InvestorDetailWorkspace({ project, projectId, investorId }: Prop
             )}
 
             {stage === "scheduled" && (
-              <div className="rounded-lg border border-[oklch(0.78_0.16_85)]/20 bg-[oklch(0.78_0.16_85)]/6 p-4 text-sm">
-                <div className="flex items-center gap-2 text-[oklch(0.78_0.16_85)]">
-                  <CalendarCheck className="size-4" />
-                  <span className="font-medium">
-                    Meeting scheduled for {formatDateTime(investor.upcoming_meeting_time)}
-                  </span>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] p-5">
+                  <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                  <div>
+                    <p className="text-[13px] font-semibold text-amber-300" style={MONO}>
+                      Meeting scheduled
+                    </p>
+                    <p className="mt-1 text-sm text-amber-200/70">
+                      {formatDateTime(investor.upcoming_meeting_time)}
+                    </p>
+                  </div>
                 </div>
                 {investor.upcoming_meet_link && (
                   <a
                     href={investor.upcoming_meet_link}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    className="group flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-[12px] text-white/40 backdrop-blur-xl transition-all hover:border-blue-400/25 hover:text-blue-300"
                   >
-                    <ExternalLink className="size-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                     {investor.upcoming_meet_link}
                   </a>
                 )}
@@ -344,12 +444,11 @@ export function InvestorDetailWorkspace({ project, projectId, investorId }: Prop
             )}
           </div>
 
-          {/* Meeting scheduler — shown when applicable but not yet scheduled */}
-          {(stage === "reply_sent") && investor.last_reply_sentiment !== "negative" && (
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Schedule a call
-              </p>
+          {/* Meeting scheduler */}
+          {stage === "reply_sent" && investor.last_reply_sentiment !== "negative" && (
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-2xl p-6">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+              <SectionLabel>Schedule a call</SectionLabel>
               <MeetingScheduler
                 investor={investor}
                 scheduling={isPending("schedule-meeting")}
