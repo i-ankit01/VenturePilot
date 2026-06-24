@@ -6,17 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send, Sparkles } from "lucide-react";
-import type { InvestorRecord } from "@/lib/investors/types";
+import type { InvestorOverview, InvestorMessage } from "@/lib/investors/types";
 
 interface EmailDraftPanelProps {
-  investor: InvestorRecord;
+  investor: InvestorOverview;
+  draft: InvestorMessage;
   sending: boolean;
   onSend: (override: { subject: string; body: string }) => void;
 }
 
-export function EmailDraftPanel({ investor, sending, onSend }: EmailDraftPanelProps) {
-  const [subject, setSubject] = useState(investor.email_subject ?? "");
-  const [body, setBody] = useState(investor.email_body ?? "");
+export function EmailDraftPanel({ investor, draft, sending, onSend }: EmailDraftPanelProps) {
+  const [subject, setSubject] = useState(draft.subject ?? "");
+  const [body, setBody]       = useState(draft.body ?? "");
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
@@ -67,9 +68,7 @@ export function EmailDraftPanel({ investor, sending, onSend }: EmailDraftPanelPr
         </div>
         <ul className="space-y-1.5 text-sm text-muted-foreground">
           {investor.reasoning.map((point, i) => (
-            <li key={i} className="leading-snug">
-              • {point}
-            </li>
+            <li key={i} className="leading-snug">• {point}</li>
           ))}
         </ul>
         {investor.relevant_signal && (

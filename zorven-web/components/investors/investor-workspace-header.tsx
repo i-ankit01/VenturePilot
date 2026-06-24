@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Search, Sparkles } from "lucide-react";
-import type { InvestorRecord, ProjectSummary } from "@/lib/investors/types";
+import type { InvestorOverview, ProjectSummary } from "@/lib/investors/types";
 
 interface InvestorWorkspaceHeaderProps {
   project: ProjectSummary;
-  investors: InvestorRecord[];
+  investors: InvestorOverview[];
   searching: boolean;
   generatingEmails: boolean;
   onSearch: () => void;
@@ -21,14 +21,14 @@ export function InvestorWorkspaceHeader({
   onGenerateEmails,
   onCheckReplies,
 }: InvestorWorkspaceHeaderProps) {
-  const matched = investors.length;
-  const drafted = investors.filter((i) => i.email_body).length;
-  const sent = investors.filter((i) => i.email_sent).length;
-  const replied = investors.filter((i) => i.reply_received).length;
+  const matched   = investors.length;
+  const drafted   = investors.filter((i) => i.has_draft || i.email_sent).length;
+  const sent      = investors.filter((i) => i.email_sent).length;
+  const replied   = investors.filter((i) => i.last_inbound_at !== null).length;
   const scheduled = investors.filter((i) => i.meeting_scheduled).length;
 
   const hasInvestors = matched > 0;
-  const allDrafted = hasInvestors && drafted === matched;
+  const allDrafted   = hasInvestors && drafted === matched;
 
   return (
     <div className="space-y-4">

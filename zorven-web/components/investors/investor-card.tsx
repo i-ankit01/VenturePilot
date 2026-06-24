@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Building2, Mail } from "lucide-react";
-import type { InvestorRecord } from "@/lib/investors/types";
+import type { InvestorOverview, InvestorMessage } from "@/lib/investors/types";
 import { getInvestorStage } from "@/lib/investors/utils";
 import { MatchScoreGauge } from "./match-score-gauge";
 import { ScoreBreakdownBars } from "./score-breakdown-bars";
@@ -11,8 +11,11 @@ import { ReplyPanel } from "./reply-panel";
 import { MeetingScheduler } from "./meeting-scheduler";
 
 interface InvestorCardProps {
-  investor: InvestorRecord;
+  investor: InvestorOverview;
   rank: number;
+  draft: InvestorMessage | null;        // pending outbound draft (is_draft=true)
+  latestInbound: InvestorMessage | null; // most recent inbound message
+  replyDraft: InvestorMessage | null;   // pending reply draft (is_draft=true, direction=outbound, after a reply)
   isPending: (action: string) => boolean;
   onSendEmail: (override: { subject: string; body: string }) => void;
   onGenerateReply: () => void;
@@ -23,6 +26,9 @@ interface InvestorCardProps {
 export function InvestorCard({
   investor,
   rank,
+  draft,
+  latestInbound,
+  replyDraft,
   isPending,
   onSendEmail,
   onGenerateReply,
@@ -61,10 +67,7 @@ export function InvestorCard({
         {(investor.investment_stages.length > 0 || investor.focus_areas.length > 0) && (
           <div className="flex flex-wrap gap-1.5">
             {investor.investment_stages.map((s) => (
-              <span
-                key={s}
-                className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground"
-              >
+              <span key={s} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                 {s}
               </span>
             ))}
@@ -86,21 +89,31 @@ export function InvestorCard({
       {stage !== "matched" && <Separator />}
 
       <div className="p-5 pt-4">
-        {stage === "drafted" && (
-          <EmailDraftPanel investor={investor} sending={isPending("send-email")} onSend={onSendEmail} />
+        {stage === "drafted" && draft && (
+          <EmailDraftPanel
+            investor={investor}
+            draft={draft}
+            sending={isPending("send-email")}
+            onSend={onSendEmail}
+          />
         )}
 
         {stage === "sent" && (
           <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3.5 text-sm text-muted-foreground">
             Sent
-            {investor.email_sent_at ? ` on ${new Date(investor.email_sent_at).toLocaleString()}` : ""} — checking
-            for a reply every 30 seconds.
+            {investor.last_outbound_at
+              ? ` on ${new Date(investor.last_outbound_at).toLocaleString()}`
+              : ""}{" "}
+            — checking for a reply every 30 seconds.
           </div>
         )}
 
-        {(stage === "replied" || stage === "reply_sent") && (
+        {(stage === "replied" || stage === "reply_sent") && latestInbound && (
           <ReplyPanel
             investor={investor}
+            latestInbound={latestInbound}
+            replyDraft={replyDraft}
+            replySent={stage === "reply_sent"}
             drafting={isPending("generate-reply")}
             sending={isPending("send-reply")}
             onDraftReply={onGenerateReply}
@@ -108,7 +121,8 @@ export function InvestorCard({
           />
         )}
 
-        {(stage === "reply_sent" || stage === "scheduled") && investor.reply_sentiment !== "negative" && (
+        {(stage === "reply_sent" || stage === "scheduled") &&
+          investor.last_reply_sentiment !== "negative" && (
           <div className="mt-4">
             <MeetingScheduler
               investor={investor}

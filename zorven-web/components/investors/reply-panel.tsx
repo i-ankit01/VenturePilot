@@ -5,36 +5,50 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, MessageSquareReply, Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { InvestorRecord } from "@/lib/investors/types";
+import type { InvestorOverview, InvestorMessage } from "@/lib/investors/types";
 
 const SENTIMENT_STYLES: Record<string, string> = {
-  positive: "bg-[oklch(0.72_0.19_152)]/10 text-[oklch(0.72_0.19_152)]",
-  neutral: "bg-muted text-muted-foreground",
-  negative: "bg-[oklch(0.66_0.21_25)]/10 text-[oklch(0.66_0.21_25)]",
+  positive:   "bg-[oklch(0.72_0.19_152)]/10 text-[oklch(0.72_0.19_152)]",
+  neutral:    "bg-muted text-muted-foreground",
+  negative:   "bg-[oklch(0.66_0.21_25)]/10 text-[oklch(0.66_0.21_25)]",
   needs_info: "bg-[oklch(0.80_0.16_85)]/12 text-[oklch(0.80_0.16_85)]",
 };
 
 const SENTIMENT_LABELS: Record<string, string> = {
-  positive: "Interested",
-  neutral: "Neutral",
-  negative: "Declined",
+  positive:   "Interested",
+  neutral:    "Neutral",
+  negative:   "Declined",
   needs_info: "Has questions",
 };
 
 interface ReplyPanelProps {
-  investor: InvestorRecord;
+  investor: InvestorOverview;
+  latestInbound: InvestorMessage;      // the investor's most recent email
+  replyDraft: InvestorMessage | null;  // pending outbound draft, if any
+  replySent: boolean;                  // true when stage === "reply_sent"
   drafting: boolean;
   sending: boolean;
   onDraftReply: () => void;
   onSendReply: (body: string) => void;
 }
 
-export function ReplyPanel({ investor, drafting, sending, onDraftReply, onSendReply }: ReplyPanelProps) {
-  const [replyBody, setReplyBody] = useState(investor.reply_draft ?? "");
+export function ReplyPanel({
+  investor,
+  latestInbound,
+  replyDraft,
+  replySent,
+  drafting,
+  sending,
+  onDraftReply,
+  onSendReply,
+}: ReplyPanelProps) {
+  const [replyBody, setReplyBody] = useState(replyDraft?.body ?? "");
 
   useEffect(() => {
-    if (investor.reply_draft) setReplyBody(investor.reply_draft);
-  }, [investor.reply_draft]);
+    if (replyDraft?.body) setReplyBody(replyDraft.body);
+  }, [replyDraft?.body]);
+
+  const sentiment = latestInbound.sentiment ?? investor.last_reply_sentiment;
 
   return (
     <div className="space-y-3">
@@ -44,28 +58,23 @@ export function ReplyPanel({ investor, drafting, sending, onDraftReply, onSendRe
             <MessageSquareReply className="size-3.5" />
             {investor.name.split(" ")[0]} replied
           </div>
-          {investor.reply_sentiment && (
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                SENTIMENT_STYLES[investor.reply_sentiment]
-              )}
-            >
-              {SENTIMENT_LABELS[investor.reply_sentiment]}
+          {sentiment && (
+            <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", SENTIMENT_STYLES[sentiment])}>
+              {SENTIMENT_LABELS[sentiment]}
             </span>
           )}
         </div>
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-          {investor.reply_received}
+          {latestInbound.body}
         </p>
       </div>
 
-      {investor.reply_sent ? (
+      {replySent ? (
         <div className="rounded-lg border border-[oklch(0.72_0.19_152)]/25 bg-[oklch(0.72_0.19_152)]/6 p-3.5 text-sm">
-          <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">{investor.reply_draft}</p>
+          <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">{replyDraft?.body}</p>
           <p className="mt-2 text-xs font-medium text-[oklch(0.72_0.19_152)]">Response sent</p>
         </div>
-      ) : investor.reply_draft ? (
+      ) : replyDraft ? (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             <Sparkles className="size-3.5" />

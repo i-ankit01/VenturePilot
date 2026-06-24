@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { InvestorRecord, InvestorStage } from "@/lib/investors/types";
+import type { InvestorOverview, InvestorStage } from "@/lib/investors/types";
 import { getInvestorStage, STAGE_LABELS } from "@/lib/investors/utils";
 
 const STAGE_STYLES: Record<InvestorStage, string> = {
@@ -20,7 +20,7 @@ const STAGE_DOTS: Record<InvestorStage, string> = {
   scheduled: "bg-[oklch(0.78_0.16_85)]",
 };
 
-export function InvestorStatusPill({ investor }: { investor: InvestorRecord }) {
+export function InvestorStatusPill({ investor }: { investor: InvestorOverview })  {
   const stage = getInvestorStage(investor);
 
   return (

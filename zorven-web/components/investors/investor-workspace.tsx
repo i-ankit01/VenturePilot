@@ -23,6 +23,9 @@ export function InvestorWorkspace({ project, userId, gmailConnected }: InvestorW
     generatingEmails,
     error,
     isPending,
+    getDraft,
+    getLatestInbound,
+    getReplyDraft,
     searchInvestors,
     generateEmails,
     sendEmail,
@@ -71,6 +74,9 @@ export function InvestorWorkspace({ project, userId, gmailConnected }: InvestorW
               key={investor.id}
               investor={investor}
               rank={idx + 1}
+              draft={getDraft(investor.id)}
+              latestInbound={getLatestInbound(investor.id)}
+              replyDraft={getReplyDraft(investor.id)}
               isPending={(action) => isPending(investor.id, action)}
               onSendEmail={(override) => sendEmail(investor.id, override)}
               onGenerateReply={() => generateReply(investor.id)}
