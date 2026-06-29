@@ -57,13 +57,6 @@ class RoadmapPhase(BaseModel):
 class ProductOutput(BaseModel):
 
     # ── CORE IDENTITY ────────────────────────────────────────────────────────
-    product_name_suggestion: str = Field(
-        description=(
-            "A working name for the product. "
-            "Should be memorable and hint at the value. "
-            "e.g. 'InvoiceZap', 'PayFlow', 'ClearBill'."
-        )
-    )
 
     usp: str = Field(
         description=(
@@ -104,15 +97,6 @@ class ProductOutput(BaseModel):
     # ── MONETIZATION ─────────────────────────────────────────────────────────
     monetization_model: MonetizationModel = Field(
         description="Primary way the product makes money."
-    )
-
-    pricing_recommendation: str = Field(
-        description=(
-            "Specific pricing recommendation with tiers if applicable. "
-            "e.g. 'Free tier: up to 3 invoices/month. "
-            "Pro: ₹499/month — unlimited invoices + reminders. "
-            "Business: ₹999/month — team access + analytics.'"
-        )
     )
 
     # ── ROADMAP ──────────────────────────────────────────────────────────────
