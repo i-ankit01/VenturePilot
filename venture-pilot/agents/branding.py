@@ -127,7 +127,6 @@ Suggested Differentiators:
 --- END COMPETITIVE LANDSCAPE ---
 
 --- PRODUCT DEFINITION ---
-Product Name Hint: {product.product_name_suggestion}
 USP:               {product.usp}
 MVP Scope:         {product.mvp_scope}
 Monetization:      {product.monetization_model}

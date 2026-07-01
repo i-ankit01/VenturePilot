@@ -67,7 +67,7 @@ export default function SignIn() {
             Welcome back
           </h1>
           <p className="text-sm text-gray-500">
-            Sign in to your ZyqoMedia account
+            Sign in to your Zorven account
           </p>
         </div>
 
