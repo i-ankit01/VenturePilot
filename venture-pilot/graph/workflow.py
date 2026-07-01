@@ -21,6 +21,7 @@ Usage:
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.redis import RedisSaver 
 
 from state import AppState
 from agents.planner    import run_planner_agent
@@ -113,7 +114,7 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
 
     # ── 5. Compile ────────────────────────────────────────────────────────
     if checkpointing:
-        memory = MemorySaver()
+        memory = RedisSaver()
         return workflow.compile(checkpointer=memory)
 
     return workflow.compile()
