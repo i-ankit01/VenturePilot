@@ -11,260 +11,211 @@ import { BrandingPanel } from "@/components/workspace/panels/branding-panel";
 import { FinancePanel } from "@/components/workspace/panels/finance-panel";
 import { GtmPanel } from "@/components/workspace/panels/gtm-panel";
 import { PitchPanel } from "@/components/workspace/panels/pitch-panel";
+import { ReportPanel } from "@/components/workspace/panels/report-panel";
+import { BrandingReviewOverlay } from "@/components/workspace/branding-review-overlay";
 import { usePipelineProgress } from "@/hooks/use-pipeline-progress";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  Cpu,
-  BarChart3,
-  Swords,
-  Package,
-  Palette,
-  DollarSign,
-  Rocket,
-  Presentation,
-  Loader2,
-  Lock,
-  AlertCircle,
+  Cpu, BarChart3, Swords, Package, Palette, DollarSign,
+  Rocket, Presentation, Loader2, Lock, AlertCircle, Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { IconFileTypePpt } from "@tabler/icons-react";
-import { ReportPanel } from "@/components/workspace/panels/report-panel";
 
-const MONO = { fontFamily: "'DM Mono', monospace" };
+const MONO = { fontFamily: "var(--font-mono)" };
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
-  { key: "planner", label: "Planner", icon: Cpu, outputKey: "planner_output" },
-  {
-    key: "research",
-    label: "Research",
-    icon: BarChart3,
-    outputKey: "research_output",
-  },
-  {
-    key: "competitor",
-    label: "Competitor",
-    icon: Swords,
-    outputKey: "competitor_output",
-  },
-  {
-    key: "product",
-    label: "Product",
-    icon: Package,
-    outputKey: "product_output",
-  },
-  {
-    key: "branding",
-    label: "Branding",
-    icon: Palette,
-    outputKey: "branding_output",
-  },
-  {
-    key: "finance",
-    label: "Finance",
-    icon: DollarSign,
-    outputKey: "finance_output",
-  },
-  { key: "gtm", label: "GTM", icon: Rocket, outputKey: "gtm_output" },
-  {
-    key: "pitch",
-    label: "Pitch",
-    icon: Presentation,
-    outputKey: "pitch_output",
-  },
-  {
-    key: "report",
-    label: "Report",
-    icon: IconFileTypePpt,
-    outputKey: "pitch_output",
-  },
+  { key: "planner",    label: "Planner",    icon: Cpu,              outputKey: "planner_output"    },
+  { key: "research",   label: "Research",   icon: BarChart3,        outputKey: "research_output"   },
+  { key: "competitor", label: "Competitor", icon: Swords,           outputKey: "competitor_output" },
+  { key: "product",    label: "Product",    icon: Package,          outputKey: "product_output"    },
+  { key: "branding",   label: "Branding",   icon: Palette,          outputKey: "branding_output"   },
+  { key: "finance",    label: "Finance",    icon: DollarSign,       outputKey: "finance_output"    },
+  { key: "gtm",        label: "GTM",        icon: Rocket,           outputKey: "gtm_output"        },
+  { key: "pitch",      label: "Pitch",      icon: Presentation,     outputKey: "pitch_output"      },
+  { key: "report",     label: "Report",     icon: IconFileTypePpt,  outputKey: "pitch_output"      },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 
-// ─── Skeleton loader ──────────────────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function PanelSkeleton({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="relative mb-5">
-        <div className="absolute inset-0 animate-ping rounded-full bg-blue-500/10" />
-        <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 ring-1 ring-blue-400/20">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-300" />
+        <div className="absolute inset-0 animate-ping rounded-full bg-primary/10" />
+        <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
       </div>
-      <p
-        className="text-sm font-medium text-white/90"
-        style={MONO}
-      >
-        {label} agent is working…
-      </p>
-      <p className="mt-1 text-[12px] text-white/40">
-        Results will appear here automatically
-      </p>
-
-      {/* Shimmer bars */}
+      <p className="text-sm font-medium text-foreground" style={MONO}>{label} agent working…</p>
+      <p className="mt-1 text-[12px] text-muted-foreground">Results appear automatically</p>
       <div className="mt-8 w-full max-w-md space-y-3">
         {[80, 60, 90, 50, 70].map((w, i) => (
-          <div
-            key={i}
-            className="h-3 animate-pulse rounded-full bg-white/[0.06]"
-            style={{ width: `${w}%`, animationDelay: `${i * 100}ms` }}
-          />
+          <div key={i} className="h-3 animate-pulse rounded-full bg-muted"
+            style={{ width: `${w}%`, animationDelay: `${i * 120}ms` }} />
         ))}
       </div>
     </div>
   );
 }
 
-// ─── Locked tab panel ─────────────────────────────────────────────────────────
+// ── Locked ────────────────────────────────────────────────────────────────────
 function LockedPanel({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.04] ring-1 ring-white/[0.08]">
-        <Lock className="h-5 w-5 text-white/30" />
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted ring-1 ring-border">
+        <Lock className="h-5 w-5 text-muted-foreground" />
       </div>
-      <p className="text-sm text-white/40">
-        <span
-          className="font-medium text-white/80"
-          style={MONO}
-        >
-          {label}
-        </span>{" "}
-        hasn't started yet
+      <p className="text-sm text-muted-foreground">
+        <span className="font-medium text-foreground" style={MONO}>{label}</span> hasn't started yet
       </p>
-      <p className="mt-1 text-[12px] text-white/25">
-        Agents run sequentially — check back soon
-      </p>
+      <p className="mt-1 text-[12px] text-muted-foreground/60">Agents run sequentially</p>
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-interface PageProps {
-  params: Promise<{ id: string }>;
+// ── Branding awaiting ─────────────────────────────────────────────────────────
+function BrandingAwaitingPanel({ onReview }: { onReview: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="relative mb-5">
+        <div className="absolute inset-0 animate-ping rounded-full bg-primary/10" style={{ animationDuration: "2s" }} />
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/25">
+          <Sparkles className="h-6 w-6 text-primary" />
+        </div>
+      </div>
+      <h3 className="text-base font-semibold text-foreground mb-1">Brand identity is ready</h3>
+      <p className="text-sm text-muted-foreground mb-5">Review, edit, and approve before the pipeline continues</p>
+      <button
+        onClick={onReview}
+        className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:bg-primary/90 hover:shadow-[0_0_28px_hsl(var(--primary)/0.4)] transition-all"
+        style={MONO}
+      >
+        <Sparkles className="h-4 w-4" /> Open Brand Review
+      </button>
+    </div>
+  );
 }
 
-export default function WorkspacePage({ params }: PageProps) {
-  const { id: jobId } = use(params);
-  // update destructure
-  const { data, status, error, completedAgents, projectTitle } = usePipelineProgress(jobId);
-  // console.log(data,status,error,completedAgents)
-  const [activeTab, setActiveTab] = useState<TabKey>("planner");
+// ── Page ──────────────────────────────────────────────────────────────────────
+interface PageProps { params: Promise<{ id: string }> }
 
-  const isRunning = status === "running" || status === "idle";
+export default function WorkspacePage({ params }: PageProps) {
+  const { id: projectId } = use(params);
+
+  const {
+    data, status, error, completedAgents, projectTitle,
+    jobId, brandingSuggestions, resumePollingAfterApproval,
+  } = usePipelineProgress(projectId);
+
+  const [activeTab, setActiveTab] = useState<TabKey>("planner");
+  const [showBrandingOverlay, setShowBrandingOverlay] = useState(true);
+
+  const isRunning       = status === "running" || status === "idle";
+  const awaitingBranding = status === "awaiting_branding_approval";
+
+  function handleBrandingApproved() {
+    setShowBrandingOverlay(false);
+    resumePollingAfterApproval();
+  }
 
   function renderPanel(tab: (typeof TABS)[number]) {
     const hasData = data && (data as any)[tab.outputKey];
 
-    if (error)
-      return (
-        <div className="flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/10 p-5 text-rose-300 backdrop-blur-xl">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <div>
-            <p className="font-semibold text-sm">Pipeline error</p>
-            <p className="text-[12px] opacity-80">{error}</p>
-          </div>
+    if (error) return (
+      <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-5 text-destructive">
+        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold">Pipeline error</p>
+          <p className="text-[12px] opacity-75 mt-0.5">{error}</p>
         </div>
-      );
+      </div>
+    );
 
-    if (!hasData && isRunning) {
-      const tabIndex = TABS.findIndex((t) => t.key === tab.key);
+    if (tab.key === "branding" && awaitingBranding && !hasData) {
+      return <BrandingAwaitingPanel onReview={() => setShowBrandingOverlay(true)} />;
+    }
+
+    if (!hasData && (isRunning || awaitingBranding)) {
+      const tabIndex = TABS.findIndex(t => t.key === tab.key);
       const isActive = completedAgents.length === tabIndex && isRunning;
-      return isActive ? (
-        <PanelSkeleton label={tab.label} />
-      ) : (
-        <LockedPanel label={tab.label} />
-      );
+      return isActive ? <PanelSkeleton label={tab.label} /> : <LockedPanel label={tab.label} />;
     }
 
     if (!hasData) return <LockedPanel label={tab.label} />;
 
-    // Render the right panel
     switch (tab.key) {
-      case "planner":
-        return <PlannerPanel data={data!.planner_output!} />;
-      case "research":
-        return <ResearchPanel data={data!.research_output!} />;
-      case "competitor":
-        return <CompetitorPanel data={data!.competitor_output!} />;
-      case "product":
-        return <ProductPanel data={data!.product_output!} />;
-      case "branding":
-        return <BrandingPanel data={data!.branding_output!} />;
-      case "finance":
-        return <FinancePanel data={data!.finance_output!} />;
-      case "gtm":
-        return <GtmPanel data={data!.gtm_output!} />;
-      case "pitch":
-        return <PitchPanel data={data!.pitch_output!} />;
-      case "report":
-        return <ReportPanel data={data!.pitch_output!} />;
+      case "planner":    return <PlannerPanel    data={data!.planner_output!}    />;
+      case "research":   return <ResearchPanel   data={data!.research_output!}   />;
+      case "competitor": return <CompetitorPanel data={data!.competitor_output!} />;
+      case "product":    return <ProductPanel    data={data!.product_output!}    />;
+      case "branding":   return <BrandingPanel   data={data!.branding_output!}   />;
+      case "finance":    return <FinancePanel    data={data!.finance_output!}    />;
+      case "gtm":        return <GtmPanel        data={data!.gtm_output!}        />;
+      case "pitch":      return <PitchPanel      data={data!.pitch_output!}      />;
+      case "report":     return <ReportPanel     data={data!.pitch_output!}      />;
     }
   }
 
-  const activeTabConfig = TABS.find((t) => t.key === activeTab)!;
+  const activeTabConfig = TABS.find(t => t.key === activeTab)!;
 
   return (
     <AppShell>
-      <div className="relative flex h-full flex-col overflow-hidden bg-[#0A0A0B] text-white">
-        {/* Ambient gradient blobs, matching the rest of the theme */}
-        <div className="pointer-events-none absolute inset-0 h-full w-full overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-700/10 rounded-full mix-blend-normal filter blur-[128px] animate-pulse delay-700" />
-          <div className="absolute top-1/4 right-1/3 w-64 h-64 bg-sky-500/10 rounded-full mix-blend-normal filter blur-[96px] animate-pulse delay-1000" />
-        </div>
+      <div className="relative flex h-full flex-col overflow-hidden bg-background text-foreground">
 
         {/* ── Top bar ── */}
-        <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] bg-white/[0.02] px-6 py-3 backdrop-blur-xl">
-          <div>
-            <p
-              className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-0.5"
-              style={MONO}
-            >
-              Project
-            </p>
-            <p
-              className="text-[13px] font-semibold text-white/90"
-              style={MONO}
-            >
-              {projectTitle || jobId}
-            </p>
+        <div className="relative z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-6 py-3 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground" style={MONO}>
+                Project
+              </p>
+              <p className="text-[13px] font-semibold text-foreground leading-tight" style={MONO}>
+                {projectTitle || projectId}
+              </p>
+            </div>
           </div>
+
           <div className="flex items-center gap-2">
             {isRunning && (
-              <span
-                className="flex items-center gap-1.5 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold text-blue-300"
+              <Badge variant="outline" className="border-primary/25 bg-primary/8 text-primary gap-1.5 text-[11px]" style={MONO}>
+                <Loader2 className="h-3 w-3 animate-spin" /> Pipeline running
+              </Badge>
+            )}
+            {awaitingBranding && (
+              <button
+                onClick={() => setShowBrandingOverlay(true)}
+                className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/15 transition-all animate-pulse"
                 style={MONO}
               >
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Pipeline running
-              </span>
+                <Sparkles className="h-3 w-3" /> Review Branding
+              </button>
             )}
             {status === "done" && (
-              <span
-                className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400"
-                style={MONO}
-              >
-                ✓ Complete
-              </span>
+              <Badge variant="outline" className="border-emerald-500/25 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 gap-1.5 text-[11px]" style={MONO}>
+                <CheckCircle2 className="h-3 w-3" /> Complete
+              </Badge>
             )}
           </div>
         </div>
 
         <div className="relative z-10 flex flex-1 overflow-hidden">
+
           {/* ── Left tab rail ── */}
-          <div className="flex w-[160px] shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.015] py-4">
-            <p
-              className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/25"
-              style={MONO}
-            >
+          <div className="flex w-[156px] shrink-0 flex-col border-r border-border/60 bg-sidebar py-4">
+            <p className="mb-2 px-4 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60" style={MONO}>
               Agents
             </p>
+
             {TABS.map((tab) => {
-              const isDone = completedAgents.includes(tab.outputKey);
-              const isActive = activeTab === tab.key;
-              const tabIndex = TABS.findIndex((t) => t.key === tab.key);
-              const isRunningNow =
-                isRunning && completedAgents.length === tabIndex;
+              const isDone      = completedAgents.includes(tab.outputKey);
+              const isActive    = activeTab === tab.key;
+              const tabIndex    = TABS.findIndex(t => t.key === tab.key);
+              const isRunningNow = isRunning && completedAgents.length === tabIndex;
+              const needsReview  = tab.key === "branding" && awaitingBranding;
 
               return (
                 <button
@@ -273,39 +224,30 @@ export default function WorkspacePage({ params }: PageProps) {
                   className={cn(
                     "group relative flex items-center gap-2.5 px-4 py-2.5 text-left transition-all",
                     isActive
-                      ? "bg-blue-500/10 text-blue-300"
-                      : "text-white/50 hover:bg-white/[0.05] hover:text-white/80",
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground/80",
                   )}
                 >
-                  {/* Active bar */}
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
+                    <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary shadow-[2px_0_8px_hsl(var(--sidebar-primary)/0.5)]" />
                   )}
-
                   <tab.icon
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0",
-                      isActive ? "text-blue-300" : "text-white/30",
-                    )}
+                    className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/30")}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  <span
-                    className="text-[12px] font-medium"
-                    style={MONO}
-                  >
-                    {tab.label}
-                  </span>
-
-                  {/* Status dot */}
+                  <span className="text-[12px] font-medium" style={MONO}>{tab.label}</span>
                   <span className="ml-auto">
-                    {isDone && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399] inline-block" />
+                    {needsReview && (
+                      <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.8)] inline-block animate-pulse" />
                     )}
-                    {isRunningNow && !isDone && (
-                      <Loader2 className="h-3 w-3 animate-spin text-blue-300" />
+                    {isDone && !needsReview && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_4px_hsl(142_71%_45%/0.8)] inline-block" />
                     )}
-                    {!isDone && !isRunningNow && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-white/[0.12] inline-block" />
+                    {isRunningNow && !isDone && !needsReview && (
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    )}
+                    {!isDone && !isRunningNow && !needsReview && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-border inline-block" />
                     )}
                   </span>
                 </button>
@@ -313,32 +255,32 @@ export default function WorkspacePage({ params }: PageProps) {
             })}
           </div>
 
-          {/* ── Main panel area ── */}
+          {/* ── Main panel ── */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            {/* Agent progress bar (top of content) */}
             <div className="shrink-0 px-6 pt-5 pb-4">
-              <AgentStatus
-                completedAgents={completedAgents}
-                pipelineStatus={status}
-              />
+              <AgentStatus completedAgents={completedAgents} pipelineStatus={status} />
             </div>
 
-            {/* Panel content */}
             <div className="flex-1 overflow-y-auto px-6 pb-8">
-              <div className="mb-4 flex items-center gap-2">
-                <activeTabConfig.icon className="h-4 w-4 text-blue-300" />
-                <h2
-                  className="text-[13px] font-semibold text-white/90"
-                  style={MONO}
-                >
+              <div className="mb-5 flex items-center gap-2">
+                <activeTabConfig.icon className="h-4 w-4 text-primary/70" />
+                <h2 className="text-[13px] font-semibold text-foreground" style={MONO}>
                   {activeTabConfig.label}
                 </h2>
               </div>
-
               {renderPanel(activeTabConfig)}
             </div>
           </div>
         </div>
+
+        {/* ── Branding review overlay ── */}
+        {awaitingBranding && showBrandingOverlay && brandingSuggestions && jobId && (
+          <BrandingReviewOverlay
+            jobId={jobId}
+            suggestions={brandingSuggestions}
+            onApproved={handleBrandingApproved}
+          />
+        )}
       </div>
     </AppShell>
   );

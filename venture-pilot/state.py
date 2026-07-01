@@ -26,6 +26,15 @@ Full pipeline flow:
     report         → fills final_report_path
 """
 
+"""
+state.py — Shared state for the VenturePilot LangGraph pipeline.
+
+Branding HITL fields:
+  branding_hitl_status  — tracks where in the HITL flow we are
+  approved_branding_*   — founder-approved values injected before phase 2
+  branding_logo_url     — Supabase Storage URL after logo generation
+"""
+
 from typing import TypedDict, Optional, List
 from schemas.planner    import PlannerOutput
 from schemas.research   import MarketResearchOutput
@@ -38,24 +47,41 @@ from schemas.pitch      import PitchOutput
 
 
 class AppState(TypedDict):
-    # ── INPUT (filled by user, then overwritten/refined by planner) ────────
-    idea: str                           # raw → refined by planner
-    industry: str                       # raw → refined by planner
-    target_market: str                  # raw → refined by planner
-    budget: Optional[str]               # e.g. "₹3L", "$5000", "bootstrapped"
-    stage: Optional[str]                # e.g. "idea", "mvp", "scaling"
+    # ── INPUT ──────────────────────────────────────────────────────────────────
+    idea:          str
+    industry:      str
+    target_market: str
+    budget:        Optional[str]
+    stage:         Optional[str]
 
-    # ── AGENT OUTPUTS ──────────────────────────────────────────────────────
-    planner_output:    Optional[PlannerOutput]        # ← planner
-    research_output:   Optional[MarketResearchOutput] # ← research
-    competitor_output: Optional[CompetitorOutput]     # ← competitor (parallel w/ product)
-    product_output:    Optional[ProductOutput]        # ← product    (parallel w/ competitor)
-    branding_output:   Optional[BrandingOutput]       # ← branding
-    finance_output:    Optional[FinanceOutput]        # ← finance    (parallel w/ gtm)
-    gtm_output:        Optional[GTMOutput]            # ← gtm        (parallel w/ finance)
-    pitch_output:      Optional[PitchOutput]          # ← pitch (fully typed now)
-    final_report_path: Optional[str]                  # ← report
+    # ── AGENT OUTPUTS ──────────────────────────────────────────────────────────
+    planner_output:    Optional[PlannerOutput]
+    research_output:   Optional[MarketResearchOutput]
+    competitor_output: Optional[CompetitorOutput]
+    product_output:    Optional[ProductOutput]
+    branding_output:   Optional[BrandingOutput]   # phase 1 output (AI suggestions)
+    finance_output:    Optional[FinanceOutput]
+    gtm_output:        Optional[GTMOutput]
+    pitch_output:      Optional[PitchOutput]
+    final_report_path: Optional[str]
 
-    # ── META ───────────────────────────────────────────────────────────────
-    errors:            Optional[List[str]]            # any agent logs errors here
-    completed_agents:  Optional[List[str]]            # tracks what has run
+    # ── BRANDING HITL ──────────────────────────────────────────────────────────
+    # Status values:
+    #   None                      → branding hasn't run yet
+    #   "awaiting_approval"       → phase 1 done, waiting for founder review
+    #   "approved"                → founder approved, phase 2 can run
+    branding_hitl_status:    Optional[str]
+
+    # Founder-approved values (injected by the API endpoint on approval).
+    # Downstream agents read from these — NOT from branding_output directly.
+    approved_branding_name:           Optional[str]
+    approved_branding_tagline:        Optional[str]
+    approved_branding_color_palette:  Optional[list]   # list of ColorSwatch dicts
+    approved_branding_logo_direction: Optional[str]
+
+    # Logo image URL (Supabase Storage, populated after phase 2)
+    branding_logo_url: Optional[str]
+
+    # ── META ───────────────────────────────────────────────────────────────────
+    errors:           Optional[List[str]]
+    completed_agents: Optional[List[str]]

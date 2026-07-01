@@ -1,26 +1,41 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { fetchPartial, PartialResult, PipelineStatus } from "@/lib/api";
+import {
+  fetchPartial,
+  PartialResult,
+  PipelineStatus,
+  BrandingSuggestions,
+} from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 
 const OUTPUT_KEYS = [
-  "planner_output", "research_output", "competitor_output", "product_output",
-  "branding_output", "finance_output", "gtm_output", "pitch_output",
+  "planner_output",
+  "research_output",
+  "competitor_output",
+  "product_output",
+  "branding_output",
+  "finance_output",
+  "gtm_output",
+  "pitch_output",
 ] as const;
-type OutputKey = typeof OUTPUT_KEYS[number];
+type OutputKey = (typeof OUTPUT_KEYS)[number];
 
 export function usePipelineProgress(projectId: string | null) {
-  const [jobId, setJobId]               = useState<string | null>(null);
-  const [projectTitle, setProjectTitle] = useState<string>("");
-  const [data, setData]                 = useState<PartialResult | null>(null);
-  const [status, setStatus]             = useState<PipelineStatus>("idle");
-  const [error, setError]               = useState<string | null>(null);
-  const intervalRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const savedRef                        = useRef(false);
-  const skipPollingRef                  = useRef(false); // ← NEW
+  const [jobId, setJobId]                         = useState<string | null>(null);
+  const [projectTitle, setProjectTitle]           = useState<string>("");
+  const [data, setData]                           = useState<PartialResult | null>(null);
+  const [status, setStatus]                       = useState<PipelineStatus>("idle");
+  const [error, setError]                         = useState<string | null>(null);
+  const [brandingSuggestions, setBrandingSuggestions] = useState<BrandingSuggestions | null>(null);
+  const [logoImageUrl, setLogoImageUrl]           = useState<string | null>(null);
 
-  // ── Step 1 ───────────────────────────────────────────────────────────────
+  const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const savedRef         = useRef(false);
+  const skipPollingRef   = useRef(false);
+  const lastDataRef      = useRef<PartialResult | null>(null);
+
+  // ── Step 1: resolve project → job_id ────────────────────────────────────
   useEffect(() => {
     if (!projectId) return;
     const supabase = createClient();
@@ -37,7 +52,6 @@ export function usePipelineProgress(projectId: string | null) {
         }
 
         setProjectTitle(project.title ?? project.job_id);
-        console.log("[Step1] project.status =", project.status); // debug
 
         if (project.status === "completed") {
           const { data: rows, error: rowsError } = await supabase
@@ -46,12 +60,9 @@ export function usePipelineProgress(projectId: string | null) {
             .eq("project_id", projectId);
 
           if (rowsError || !rows || rows.length === 0) {
-            // No saved rows — fall through to polling
             setJobId(project.job_id);
             return;
           }
-
-          console.log("[Step1] restored rows:", rows.length); // debug
 
           const restored: Partial<PartialResult> = {};
           for (const row of rows) {
@@ -61,35 +72,55 @@ export function usePipelineProgress(projectId: string | null) {
             }
           }
 
-          // ── ORDER MATTERS: set skipPollingRef BEFORE setJobId ──
-          skipPollingRef.current = true; // ← tells Step 2 not to poll
-          savedRef.current = true;
+          skipPollingRef.current = true;
+          savedRef.current       = true;
+          lastDataRef.current    = restored as PartialResult;
           setData(restored as PartialResult);
           setStatus("done");
-          setJobId(project.job_id); // ← triggers Step 2, but ref guards it
+          setJobId(project.job_id);
           return;
         }
 
-        // Not completed — let Step 2 poll
         setJobId(project.job_id);
       });
   }, [projectId]);
 
-  // ── Step 2 ───────────────────────────────────────────────────────────────
+  // ── Step 2: poll /api/partial/:jobId ────────────────────────────────────
   useEffect(() => {
-    console.log("[Step2] fired — jobId:", jobId, "skipPolling:", skipPollingRef.current); // debug
-    
-    if (!jobId || skipPollingRef.current) return; // ← ref is always current, no stale closure
+    if (!jobId || skipPollingRef.current) return;
 
     setStatus("running");
 
     intervalRef.current = setInterval(async () => {
       try {
         const json = await fetchPartial(jobId);
-        setData(json.partial);
+
+        // Never overwrite good data with empty response
+        if (json.partial && Object.keys(json.partial).length > 0) {
+          lastDataRef.current = json.partial;
+          setData(json.partial);
+        } else if (lastDataRef.current) {
+          setData(lastDataRef.current);
+        }
+
         setStatus(json.status);
 
-        if (json.status === "done" || json.status === "error") {
+        // HITL: branding suggestions arrived
+        if (json.branding_suggestions) {
+          setBrandingSuggestions(json.branding_suggestions);
+        }
+
+        // Logo generated in phase 2
+        if (json.logo_image_url) {
+          setLogoImageUrl(json.logo_image_url);
+        }
+
+        // Stop polling on terminal states
+        if (
+          json.status === "done" ||
+          json.status === "error" ||
+          json.status === "awaiting_branding_approval"
+        ) {
           clearInterval(intervalRef.current!);
         }
       } catch (err) {
@@ -104,11 +135,47 @@ export function usePipelineProgress(projectId: string | null) {
     };
   }, [jobId]);
 
-  // ── Step 3 (unchanged) ────────────────────────────────────────────────────
+  // ── Step 2b: resume polling after branding approval ─────────────────────
+  // Called from the workspace page after approveBranding() returns.
+  function resumePollingAfterApproval() {
+    if (!jobId) return;
+
+    setStatus("running");
+    savedRef.current = false; // allow saving again when phase 2 done
+
+    intervalRef.current = setInterval(async () => {
+      try {
+        const json = await fetchPartial(jobId);
+
+        if (json.partial && Object.keys(json.partial).length > 0) {
+          lastDataRef.current = json.partial;
+          setData(json.partial);
+        } else if (lastDataRef.current) {
+          setData(lastDataRef.current);
+        }
+
+        setStatus(json.status);
+
+        if (json.logo_image_url) {
+          setLogoImageUrl(json.logo_image_url);
+        }
+
+        if (json.status === "done" || json.status === "error") {
+          clearInterval(intervalRef.current!);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+        setStatus("error");
+        clearInterval(intervalRef.current!);
+      }
+    }, 3000);
+  }
+
+  // ── Step 3: persist to Supabase when done ───────────────────────────────
   useEffect(() => {
     if (status !== "done" || !data || !projectId || savedRef.current) return;
     savedRef.current = true;
-    
+
     const supabase = createClient();
 
     const agentMap: Record<string, OutputKey> = {
@@ -130,23 +197,30 @@ export function usePipelineProgress(projectId: string | null) {
         output: data[outputKey],
       }));
 
-    // Upsert in case of re-runs
     supabase
       .from("analysis_results")
       .upsert(inserts, { onConflict: "project_id,agent" })
       .then(() => {
-        // Mark project as completed
         supabase
           .from("projects")
           .update({ status: "completed" })
           .eq("id", projectId);
       });
-      
   }, [status, data, projectId]);
 
   const completedAgents: string[] = data
     ? OUTPUT_KEYS.filter((k) => data[k] != null)
     : [];
 
-  return { data, status, error, completedAgents, projectTitle };
+  return {
+    data,
+    status,
+    error,
+    completedAgents,
+    projectTitle,
+    jobId,
+    brandingSuggestions,
+    logoImageUrl,
+    resumePollingAfterApproval,
+  };
 }
