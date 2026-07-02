@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AgentStatus } from "@/components/workspace/agent-status";
 import { PlannerPanel } from "@/components/workspace/panels/planner-panel";
@@ -22,6 +22,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { IconFileTypePpt } from "@tabler/icons-react";
+import { StuckBanner } from "@/components/workspace/stuck-banner";
+import type { BrandingSuggestions } from "@/lib/api";
 
 const MONO = { fontFamily: "var(--font-mono)" };
 
@@ -38,6 +40,7 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
+
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function PanelSkeleton({ label }: { label: string }) {
@@ -99,6 +102,41 @@ function BrandingAwaitingPanel({ onReview }: { onReview: () => void }) {
   );
 }
 
+function BrandingReviewLoadingPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 px-6 backdrop-blur-xl">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-2xl shadow-black/10">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <h3 className="mb-2 text-base font-semibold text-foreground">Brand review is opening</h3>
+        <p className="mb-6 text-sm text-muted-foreground">
+          The branding panel is still loading its data. This usually resolves as soon as the paused job payload is available.
+        </p>
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-border px-4 py-2 text-[12px] font-semibold text-foreground transition-colors hover:bg-muted"
+          style={MONO}
+        >
+          Back to workspace
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function toBrandingSuggestions(brandingOutput: any): BrandingSuggestions | null {
+  if (!brandingOutput) return null;
+
+  return {
+    name_suggestion: brandingOutput.name_suggestion,
+    tagline: brandingOutput.tagline,
+    color_palette: brandingOutput.color_palette,
+    color_palette_rationale: brandingOutput.color_palette_rationale,
+    logo_direction: brandingOutput.logo_direction,
+  };
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -107,18 +145,29 @@ export default function WorkspacePage({ params }: PageProps) {
 
   const {
     data, status, error, completedAgents, projectTitle,
-    jobId, brandingSuggestions, resumePollingAfterApproval,
+    jobId, brandingSuggestions, resumePollingAfterApproval, isStuck, resumeStuckJob
   } = usePipelineProgress(projectId);
 
   const [activeTab, setActiveTab] = useState<TabKey>("planner");
-  const [showBrandingOverlay, setShowBrandingOverlay] = useState(true);
+  const [showBrandingOverlay, setShowBrandingOverlay] = useState(false);
 
   const isRunning       = status === "running" || status === "idle";
   const awaitingBranding = status === "awaiting_branding_approval";
+  const brandingReviewSuggestions = brandingSuggestions ?? toBrandingSuggestions(data?.branding_output);
+
+  useEffect(() => {
+    if (awaitingBranding && brandingReviewSuggestions && jobId) {
+      setShowBrandingOverlay(true);
+    }
+  }, [awaitingBranding, brandingReviewSuggestions, jobId]);
 
   function handleBrandingApproved() {
     setShowBrandingOverlay(false);
     resumePollingAfterApproval();
+  }
+
+  function openBrandingReview() {
+    setShowBrandingOverlay(true);
   }
 
   function renderPanel(tab: (typeof TABS)[number]) {
@@ -134,8 +183,8 @@ export default function WorkspacePage({ params }: PageProps) {
       </div>
     );
 
-    if (tab.key === "branding" && awaitingBranding && !hasData) {
-      return <BrandingAwaitingPanel onReview={() => setShowBrandingOverlay(true)} />;
+    if (tab.key === "branding" && awaitingBranding) {
+      return <BrandingAwaitingPanel onReview={openBrandingReview} />;
     }
 
     if (!hasData && (isRunning || awaitingBranding)) {
@@ -187,7 +236,7 @@ export default function WorkspacePage({ params }: PageProps) {
             )}
             {awaitingBranding && (
               <button
-                onClick={() => setShowBrandingOverlay(true)}
+                onClick={openBrandingReview}
                 className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/15 transition-all animate-pulse"
                 style={MONO}
               >
@@ -203,6 +252,8 @@ export default function WorkspacePage({ params }: PageProps) {
         </div>
 
         <div className="relative z-10 flex flex-1 overflow-hidden">
+
+          {isStuck && <StuckBanner onResume={resumeStuckJob} />}
 
           {/* ── Left tab rail ── */}
           <div className="flex w-[156px] shrink-0 flex-col border-r border-border/60 bg-sidebar py-4">
@@ -274,12 +325,16 @@ export default function WorkspacePage({ params }: PageProps) {
         </div>
 
         {/* ── Branding review overlay ── */}
-        {awaitingBranding && showBrandingOverlay && brandingSuggestions && jobId && (
-          <BrandingReviewOverlay
-            jobId={jobId}
-            suggestions={brandingSuggestions}
-            onApproved={handleBrandingApproved}
-          />
+        {awaitingBranding && showBrandingOverlay && (
+          brandingReviewSuggestions && jobId ? (
+            <BrandingReviewOverlay
+              jobId={jobId}
+              suggestions={brandingReviewSuggestions}
+              onApproved={handleBrandingApproved}
+            />
+          ) : (
+            <BrandingReviewLoadingPanel onClose={() => setShowBrandingOverlay(false)} />
+          )
         )}
       </div>
     </AppShell>

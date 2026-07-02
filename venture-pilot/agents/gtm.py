@@ -167,15 +167,14 @@ Our Differentiators:
 USP:             {product.usp}
 MVP Scope:       {product.mvp_scope}
 Monetization:    {product.monetization_model}
-Pricing:         {product.pricing_recommendation}
 
 Core Features:
 {features_str}
 --- END PRODUCT ---
 
 --- BRAND IDENTITY ---
-Recommended Name:    {branding.recommended_name}
-Tagline:             {branding.recommended_tagline}
+Recommended Name:    {branding.approved_name}
+Tagline:             {branding.approved_tagline}
 Brand Personality:   {branding.brand_personality}
 Brand Tone:          {branding.brand_tone}
 Voice:               {branding.brand_voice_description}

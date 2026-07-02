@@ -145,7 +145,6 @@ def run_pitch_agent(state: AppState) -> AppState:
     feature_list = "\n".join(
         f"  - [{f.priority}] {f.name}: {f.description}" for f in product.core_features
     )
-    pricing_list = "\n".join(f"  - {t}" for t in product.pricing_recommendation.split("."))
     milestone_weeks = [w for w in gtm.weekly_plan if w.milestone]
     gtm_channels = "\n".join(
         f"  - [{c.priority}] {c.channel.value}: {c.why_this_channel}"
@@ -186,19 +185,17 @@ Our Differentiators:
 {chr(10).join(f"  - {d}" for d in competitor.suggested_differentiators)}
 
 === PRODUCT ===
-Name:          {product.product_name_suggestion}
 USP:           {product.usp}
 MVP Scope:     {product.mvp_scope}
 Monetization:  {product.monetization_model}
-Pricing:       {product.pricing_recommendation}
 Features:
 {feature_list}
 Tech Stack:    {', '.join(product.suggested_tech_stack)}
 Risks:         {', '.join(product.product_risks)}
 
 === BRAND IDENTITY ===
-Recommended Name:    {branding.recommended_name}
-Tagline:             {branding.recommended_tagline}
+Recommended Name:    {branding.approved_name}
+Tagline:             {branding.approved_tagline}
 One-liner:           {branding.elevator_pitch}
 Personality:         {branding.brand_personality}
 Tone:                {branding.brand_tone}

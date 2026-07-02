@@ -113,10 +113,8 @@ Market Trends:
 --- END RESEARCH ---
 
 --- PRODUCT & PRICING ---
-Product Name:      {product.product_name_suggestion}
 USP:               {product.usp}
 Monetization:      {product.monetization_model}
-Pricing:           {product.pricing_recommendation}
 MVP Scope:         {product.mvp_scope}
 
 Core Features:

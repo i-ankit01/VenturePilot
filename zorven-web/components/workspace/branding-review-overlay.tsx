@@ -245,7 +245,7 @@ export function BrandingReviewOverlay({ jobId, suggestions, onApproved }: Props)
       </div>
 
       {/* ── Body ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-28">
         <div className="mx-auto max-w-2xl space-y-6 px-8 py-10">
 
           {/* ── Name ── */}
@@ -408,7 +408,7 @@ export function BrandingReviewOverlay({ jobId, suggestions, onApproved }: Props)
       </div>
 
       {/* ── Footer ── */}
-      <div className="relative z-10 border-t border-border/60 bg-background/95 px-8 py-5 backdrop-blur-xl">
+      <div className="sticky bottom-0 z-20 border-t border-border/60 bg-background/95 px-8 py-5 backdrop-blur-xl">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <div>

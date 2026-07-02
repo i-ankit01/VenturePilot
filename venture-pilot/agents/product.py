@@ -53,7 +53,6 @@ RULES:
 - Tech stack must be practical — don't recommend microservices for a $5K budget.
 - Pricing must be grounded in the target market's willingness to pay.
 - Roadmap phases must be realistic — 0-3 months, 3-6 months, 6-12 months.
-- product_name_suggestion should be catchy, available-sounding, and domain-friendly.
 """
 
 
@@ -221,7 +220,7 @@ if __name__ == "__main__":
 
         print(f"\nTech Stack:    {', '.join(p.suggested_tech_stack)}")
         print(f"Monetization:  {p.monetization_model}")
-        print(f"\nPricing:\n  {p.pricing_recommendation}")
+        # print(f"\nPricing:\n  {p.pricing_recommendation}")
 
         print(f"\nRoadmap:")
         for phase in p.roadmap:
