@@ -283,20 +283,30 @@ async def run_pipeline_until_interrupt(job_id: str, request: PitchRequest):
 
 async def resume_pipeline_after_approval(job_id: str, approval: BrandingApprovalRequest):
     config = make_thread_config(job_id)
+    try:
+        # Inject approved values into the Redis checkpoint
+        await _graph.aupdate_state(config, {
+            "approved_branding_name":           approval.approved_name,
+            "approved_branding_tagline":        approval.approved_tagline,
+            "approved_branding_color_palette":  approval.approved_color_palette,
+            "approved_branding_logo_direction": approval.approved_logo_direction,
+            "branding_hitl_status":             "approved",
+        })
+        print(f"[server] Approved state injected for job {job_id}")
 
-    # Inject approved values into the Redis checkpoint
-    await _graph.aupdate_state(config, {
-        "approved_branding_name":           approval.approved_name,
-        "approved_branding_tagline":        approval.approved_tagline,
-        "approved_branding_color_palette":  approval.approved_color_palette,
-        "approved_branding_logo_direction": approval.approved_logo_direction,
-        "branding_hitl_status":             "approved",
-    })
-    print(f"[server] Approved state injected for job {job_id}")
-
-    job_update(job_id, {"status": "running"})
-    # None = resume from checkpoint
-    await _stream_graph(job_id, None, config, is_phase2=True)
+        job_update(job_id, {"status": "running"})
+        # None = resume from checkpoint
+        await _stream_graph(job_id, None, config, is_phase2=True)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        job_update(job_id, {
+            "status": "error",
+            "errors": [
+                f"Failed to resume after branding approval: {str(e)}"
+            ],
+        })
+        print(f"[server] Failed to resume approved job {job_id}: {e}")
 
 
 # ── Resume a stuck job from its last Redis checkpoint ─────────────────────────
