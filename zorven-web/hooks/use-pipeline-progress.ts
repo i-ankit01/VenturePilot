@@ -62,9 +62,9 @@ export function usePipelineProgress(projectId: string | null) {
           intervalRef.current = null;
         }
 
-        // If status is still "running" after 30s with no new agent output,
+        // If status is still in an in-flight phase after a while with no new output,
         // the background task was likely killed. Surface a resume prompt.
-        if (json.status === "running") {
+        if (json.status === "running" || json.status === "branding_approved") {
           if (stuckTimerRef.current) clearTimeout(stuckTimerRef.current);
           stuckTimerRef.current = setTimeout(() => {
             setIsStuck(true);
@@ -83,6 +83,21 @@ export function usePipelineProgress(projectId: string | null) {
   // ── Step 1: resolve project → job_id ─────────────────────────────────────
   useEffect(() => {
     if (!projectId) return;
+
+    // Reset runtime polling state when switching projects so a previous
+    // project's interval cannot keep running against the new page.
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (stuckTimerRef.current) {
+      clearTimeout(stuckTimerRef.current);
+      stuckTimerRef.current = null;
+    }
+    skipPollingRef.current = false;
+    resumeCalledRef.current = false;
+    setIsStuck(false);
+
     const supabase = createClient();
 
     supabase
@@ -96,6 +111,12 @@ export function usePipelineProgress(projectId: string | null) {
 
         // ── Case 1: fully completed — restore from analysis_results ──────────
         if (project.status === "completed") {
+          // Completed projects should never continue polling.
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+
           const { data: rows, error: rowsError } = await supabase
             .from("analysis_results")
             .select("agent, output")
@@ -130,7 +151,7 @@ export function usePipelineProgress(projectId: string | null) {
 
         const { data: jobRow } = await supabase
           .from("jobs")
-          .select("status, partial, branding_suggestions")
+          .select("status, partial, branding_suggestions, approved_branding")
           .eq("id", jobId)
           .single();
 
@@ -143,6 +164,8 @@ export function usePipelineProgress(projectId: string | null) {
         if (jobRow?.branding_suggestions) {
           setBrandingSuggestions(jobRow.branding_suggestions);
         }
+
+        const brandingWasApproved = !!jobRow?.approved_branding;
 
         const jobStatus = jobRow?.status ?? "pending";
 
@@ -167,6 +190,13 @@ export function usePipelineProgress(projectId: string | null) {
           // "running" means the background task was killed mid-run (reload/crash).
           // "error" means it crashed. "pending" means it never started.
           // In all three cases: auto-resume from the Redis checkpoint.
+          // If branding was already approved, the job is in phase 2 and should
+          // keep polling instead of rewinding back to the branding interrupt.
+          if (brandingWasApproved) {
+            setStatus("running");
+            setJobId(jobId);
+            return;
+          }
           console.log(`[hook] Job ${jobId} status="${jobStatus}" — auto-resuming from checkpoint`);
           setStatus("running");
           setJobId(jobId); // triggers Step 2 polling
@@ -191,7 +221,7 @@ export function usePipelineProgress(projectId: string | null) {
 
   // ── Step 2: start polling when jobId resolves ─────────────────────────────
   useEffect(() => {
-    if (!jobId || skipPollingRef.current) return;
+    if (!jobId || skipPollingRef.current || status === "done") return;
     setStatus("running");
     startPolling(jobId);
     return () => {

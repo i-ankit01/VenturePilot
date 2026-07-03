@@ -155,12 +155,6 @@ export default function WorkspacePage({ params }: PageProps) {
   const awaitingBranding = status === "awaiting_branding_approval";
   const brandingReviewSuggestions = brandingSuggestions ?? toBrandingSuggestions(data?.branding_output);
 
-  useEffect(() => {
-    if (awaitingBranding && brandingReviewSuggestions && jobId) {
-      setShowBrandingOverlay(true);
-    }
-  }, [awaitingBranding, brandingReviewSuggestions, jobId]);
-
   function handleBrandingApproved() {
     setShowBrandingOverlay(false);
     resumePollingAfterApproval();
