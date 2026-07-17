@@ -195,7 +195,7 @@ async def partial_result(job_id: str):
         "status":           job["status"],
         "completed_agents": job.get("completed_agents", []),
         "partial":          job.get("partial", {}),
-        "report_path":      job.get("report_path"),
+        # "report_path":      job.get("report_path"),
         "errors":           job.get("errors", []),
     }
 

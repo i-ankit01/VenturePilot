@@ -81,7 +81,7 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
     workflow.add_node(FINANCE,    run_finance_agent)
     workflow.add_node(GTM,        run_gtm_agent)
     workflow.add_node(PITCH,      run_pitch_agent)
-    workflow.add_node(REPORT,     run_report_agent)
+    # workflow.add_node(REPORT,     run_report_agent)
 
     # ── 3. Set entry point ────────────────────────────────────────────────
     workflow.set_entry_point(PLANNER)
@@ -108,8 +108,8 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
     workflow.add_edge(GTM,     PITCH)
 
     # pitch → report → END
-    workflow.add_edge(PITCH,  REPORT)
-    workflow.add_edge(REPORT, END)
+    workflow.add_edge(PITCH,  END)
+    # workflow.add_edge(REPORT, END)
 
     # ── 5. Compile ────────────────────────────────────────────────────────
     if checkpointing:
