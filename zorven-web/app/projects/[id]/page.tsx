@@ -318,6 +318,7 @@ export default function WorkspacePage({ params }: PageProps) {
             {/* Agent progress bar (top of content) */}
             <div className="shrink-0 px-6 pt-5 pb-4">
               <AgentStatus
+              jobId={jobId}
                 completedAgents={completedAgents}
                 pipelineStatus={status}
               />

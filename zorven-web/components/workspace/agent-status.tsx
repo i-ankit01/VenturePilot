@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Loader2, Circle } from "lucide-react";
+import { CheckCircle2, Loader2, Circle, RotateCcw } from "lucide-react";
 
 const AGENTS = [
   { key: "planner_output",    label: "Planner" },
@@ -16,16 +17,36 @@ const AGENTS = [
 
 const MONO = { fontFamily: "'DM Mono', monospace" };
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
 interface AgentStatusProps {
+  jobId: string;
   completedAgents: string[];
   pipelineStatus: string;
 }
 
-export function AgentStatus({ completedAgents, pipelineStatus }: AgentStatusProps) {
+export function AgentStatus({ jobId, completedAgents, pipelineStatus }: AgentStatusProps) {
+  const [isResuming, setIsResuming] = useState(false);
+  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
+
   const doneCount = completedAgents.length;
   const total     = AGENTS.length;
   const pct       = Math.round((doneCount / total) * 100);
   const isRunning = pipelineStatus === "running";
+
+  async function handleResume() {
+    setIsResuming(true);
+    setResumeMessage(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/resume/${jobId}`, { method: "POST" });
+      const data = await res.json();
+      setResumeMessage(data.error ? `Error: ${data.error}` : "Resume triggered");
+    } catch (err) {
+      setResumeMessage("Request failed — check the server is running");
+    } finally {
+      setIsResuming(false);
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-white/[0.05] bg-white/[0.02] backdrop-blur-2xl px-5 py-4">
@@ -46,12 +67,35 @@ export function AgentStatus({ completedAgents, pipelineStatus }: AgentStatusProp
             {isRunning ? "Pipeline running…" : doneCount === total ? "All agents complete" : "Pipeline idle"}
           </span>
         </div>
-        <span
-          className="text-[11px] tabular-nums text-white/30"
-          style={MONO}
-        >
-          {doneCount}/{total} agents · {pct}%
-        </span>
+
+        <div className="flex items-center gap-3">
+          <span
+            className="text-[11px] tabular-nums text-white/30"
+            style={MONO}
+          >
+            {doneCount}/{total} agents · {pct}%
+          </span>
+
+          {/* Dev-only resume button — fires POST /api/resume/{jobId} */}
+          <button
+            type="button"
+            onClick={handleResume}
+            disabled={isResuming}
+            className={cn(
+              "flex items-center gap-1 rounded-sm border border-white/[0.08] bg-white/[0.03] px-2 py-0.5",
+              "text-[10px] font-medium text-white/50 transition-all hover:bg-white/[0.06] hover:text-white/80",
+              "disabled:opacity-50",
+            )}
+            style={MONO}
+          >
+            {isResuming ? (
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            ) : (
+              <RotateCcw className="h-2.5 w-2.5" />
+            )}
+            Resume
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -91,6 +135,15 @@ export function AgentStatus({ completedAgents, pipelineStatus }: AgentStatusProp
           );
         })}
       </div>
+
+      {resumeMessage && (
+        <div
+          className="mt-2 text-[10px] text-white/40"
+          style={MONO}
+        >
+          {resumeMessage}
+        </div>
+      )}
     </div>
   );
 }
