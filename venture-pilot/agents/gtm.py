@@ -167,7 +167,6 @@ Our Differentiators:
 USP:             {product.usp}
 MVP Scope:       {product.mvp_scope}
 Monetization:    {product.monetization_model}
-Pricing:         {product.pricing_recommendation}
 
 Core Features:
 {features_str}

@@ -129,7 +129,7 @@ Every feature must directly address one of the pain points listed above.
         return {**state, "errors": errors}
 
     print(f"[Product Agent] ✓ Product defined.")
-    print(f"[Product Agent]   Name suggestion: {product_output.product_name_suggestion}")
+    # print(f"[Product Agent]   Name suggestion: {product_output.product_name_suggestion}")
     print(f"[Product Agent]   Monetization:    {product_output.monetization_model}")
     print(f"[Product Agent]   Features:        {len(product_output.core_features)} features mapped")
 
@@ -209,7 +209,6 @@ if __name__ == "__main__":
 
     if result.get("product_output"):
         p = result["product_output"]
-        print(f"\nProduct Name:  {p.product_name_suggestion}")
         print(f"USP:           {p.usp}")
         print(f"\nMVP Scope:\n  {p.mvp_scope}")
 
@@ -221,7 +220,7 @@ if __name__ == "__main__":
 
         print(f"\nTech Stack:    {', '.join(p.suggested_tech_stack)}")
         print(f"Monetization:  {p.monetization_model}")
-        print(f"\nPricing:\n  {p.pricing_recommendation}")
+        # print(f"\nPricing:\n  {p.pricing_recommendation}")
 
         print(f"\nRoadmap:")
         for phase in p.roadmap:

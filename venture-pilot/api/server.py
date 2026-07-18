@@ -1,15 +1,18 @@
 # uvicorn api.server:app --reload --port 8000
 
+import asyncio
+import os
+import uuid
+
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import uuid, os
-from main import run_venture_pilot
-from langgraph.graph import StateGraph
+
 from graph.workflow import build_graph
 from routers import investors
 from routers import auth_google
+from api.jobs_store import save_job, get_job, update_job, list_job_ids_by_status
 
 app = FastAPI()
 
@@ -23,8 +26,6 @@ app.add_middleware(
 app.include_router(investors.router)
 app.include_router(auth_google.router)
 
-# In-memory job store (replace with Redis for production)
-jobs = {}
 
 class PitchRequest(BaseModel):
     idea: str
@@ -32,6 +33,7 @@ class PitchRequest(BaseModel):
     target_market: str
     budget: str = "bootstrapped"
     stage: str = "idea"
+
 
 class JobStatus(BaseModel):
     job_id: str
@@ -41,40 +43,93 @@ class JobStatus(BaseModel):
     report_path: str | None = None
 
 
-# def run_pipeline_job(job_id: str, request: PitchRequest):
-#     jobs[job_id]["status"] = "running"
-#     try:
-#         result = run_venture_pilot(
-#             idea=request.idea,
-#             industry=request.industry,
-#             target_market=request.target_market,
-#             budget=request.budget,
-#             stage=request.stage,
-#             verbose=False
-#         )
-#         jobs[job_id].update({
-#             "status":           "done",
-#             "completed_agents": result.get("completed_agents") or [],
-#             "errors":           result.get("errors") or [],
-#             "report_path":      result.get("final_report_path"),
-#             "result":           result   # full state — all agent outputs
-#         })
-#     except Exception as e:
-#         jobs[job_id].update({"status": "error", "errors": [str(e)]})
+def _new_job_record() -> dict:
+    return {
+        "status": "pending",
+        "completed_agents": [],
+        "errors": [],
+        "partial": {},
+        "result": {},
+        "report_path": None,
+    }
 
-# to stream the output after each agent 
+
+def _serialize_state(state: dict) -> dict:
+    """Node output values can be Pydantic models — those aren't JSON
+    serializable, and everything going into the job store has to be
+    (Redis just stores strings). Convert anything with model_dump()."""
+    out = {}
+    for k, v in state.items():
+        out[k] = v.model_dump() if hasattr(v, "model_dump") else v
+    return out
+
+
+def _stream_graph(job_id: str, graph, config: dict, input_state):
+    """
+    Runs graph.stream() and pushes every node's output into the job record
+    in Redis as it arrives. Shared by both the fresh-run path and the
+    resume path — the only difference between them is `input_state`:
+    a full initial state to start fresh, or `None` to resume from whatever
+    checkpoint already exists for this thread_id.
+    """
+    update_job(job_id, status="running")
+
+    try:
+        # .stream() yields {"node_name": state_snapshot} after each node
+        for chunk in graph.stream(input_state, stream_mode="updates", config=config):
+            node_name = list(chunk.keys())[0]
+            node_state = chunk[node_name]
+
+            job = get_job(job_id) or _new_job_record()
+
+            result = job.get("result", {})
+            result.update(_serialize_state(node_state))
+
+            # grab whatever output this agent just wrote
+            partial = job.get("partial", {})
+            output_key = f"{node_name}_output"
+            if output_key in node_state and node_state[output_key] is not None:
+                output = node_state[output_key]
+                partial[output_key] = (
+                    output.model_dump() if hasattr(output, "model_dump") else output
+                )
+
+            # track completed agents
+            completed = node_state.get("completed_agents") or job.get("completed_agents", [])
+
+            updates = {
+                "result": result,
+                "partial": partial,
+                "completed_agents": completed,
+            }
+
+            # special case: report writes final_report_path not *_output
+            if "final_report_path" in node_state:
+                updates["report_path"] = node_state["final_report_path"]
+
+            update_job(job_id, **updates)
+            print(f"[server] job={job_id} agent done: {node_name}")
+
+        update_job(job_id, status="done")
+
+    except Exception as e:
+        job = get_job(job_id) or _new_job_record()
+        errors = job.get("errors", [])
+        errors.append(str(e))
+        update_job(job_id, status="error", errors=errors)
+
+
 def run_pipeline_job(job_id: str, request: PitchRequest):
-    jobs[job_id]["status"] = "running"
-    jobs[job_id]["partial"] = {}   # ← stores agent outputs as they arrive
-
-    graph = build_graph(checkpointing=False)
+    """Fresh run: starts the graph from PLANNER with a brand-new state."""
+    graph = build_graph(checkpointing=True)
+    config = {"configurable": {"thread_id": job_id}}
 
     initial_state = {
-        "idea":           request.idea,
-        "industry":       request.industry,
-        "target_market":  request.target_market,
-        "budget":         request.budget,
-        "stage":          request.stage,
+        "idea":              request.idea,
+        "industry":          request.industry,
+        "target_market":     request.target_market,
+        "budget":            request.budget,
+        "stage":             request.stage,
         "planner_output":    None,
         "research_output":   None,
         "competitor_output": None,
@@ -88,52 +143,86 @@ def run_pipeline_job(job_id: str, request: PitchRequest):
         "completed_agents":  None,
     }
 
-    try:
-        # .stream() yields {"node_name": state_snapshot} after each node
-        for chunk in graph.stream(initial_state, stream_mode="updates"):
-            node_name = list(chunk.keys())[0]
-            node_state = chunk[node_name]
+    _stream_graph(job_id, graph, config, initial_state)
 
-            # grab whatever output this agent just wrote
-            output_key = f"{node_name}_output"
-            if output_key in node_state and node_state[output_key] is not None:
-                output = node_state[output_key]
-                jobs[job_id]["partial"][output_key] = (
-                    output.model_dump() if hasattr(output, "model_dump") else output
-                )
 
-            # track completed agents
-            completed = node_state.get("completed_agents") or []
-            jobs[job_id]["completed_agents"] = completed
+def resume_pipeline_job(job_id: str):
+    """
+    Resume a job that got interrupted (server crash/restart, worker killed
+    mid-run, deploy, etc).
 
-            # special case: report writes final_report_path not *_output
-            if "final_report_path" in node_state:
-                jobs[job_id]["report_path"] = node_state["final_report_path"]
+    The key thing: passing `None` as the input to graph.stream()/.invoke()
+    tells LangGraph "there is no new input, just continue from wherever the
+    checkpoint for this thread_id left off." Passing `initial_state` again
+    (like the original code always did) doesn't resume anything — it's a
+    fresh update, not a continuation. That's why nothing could actually
+    resume before.
+    """
+    graph = build_graph(checkpointing=True)
+    config = {"configurable": {"thread_id": job_id}}
 
-            print(f"[server] Agent done: {node_name}")
+    snapshot = graph.get_state(config)
 
-        jobs[job_id]["status"] = "done"
+    # No checkpoint at all, or nothing left to run according to the checkpoint
+    if snapshot is None or not snapshot.next:
+        job = get_job(job_id)
+        if job and job.get("status") in ("running", "pending"):
+            errors = job.get("errors", [])
+            errors.append("No resumable checkpoint found for this job")
+            update_job(job_id, status="error", errors=errors)
+        return
 
-    except Exception as e:
-        jobs[job_id].update({"status": "error", "errors": [str(e)]})
+    print(f"[server] resuming job={job_id} from node(s): {snapshot.next}")
+    _stream_graph(job_id, graph, config, None)
 
+
+@app.on_event("startup")
+async def resume_interrupted_jobs_on_startup():
+    """
+    If the server crashed or was redeployed while jobs were mid-flight,
+    their records in Redis are still sitting at status "running"/"pending"
+    with no BackgroundTask left alive to finish them. On startup, find
+    those and kick off a resume for each from the LangGraph checkpoint,
+    instead of leaving them stuck forever.
+    """
+    stuck_ids = list_job_ids_by_status("running", "pending")
+    for job_id in stuck_ids:
+        print(f"[startup] found interrupted job {job_id}, attempting resume")
+        asyncio.create_task(asyncio.to_thread(resume_pipeline_job, job_id))
 
 
 @app.post("/api/analyze")
 async def analyze(request: PitchRequest, background_tasks: BackgroundTasks):
     """Start the pipeline. Returns a job_id immediately."""
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {"status": "pending", "completed_agents": [], "errors": []}
+    save_job(job_id, _new_job_record())
     background_tasks.add_task(run_pipeline_job, job_id, request)
     return {"job_id": job_id}
+
+
+@app.post("/api/resume/{job_id}")
+async def resume(job_id: str, background_tasks: BackgroundTasks):
+    """
+    Manually trigger a resume for a job stuck in "running"/"pending" — e.g.
+    if the frontend notices a job hasn't progressed in a while and wants to
+    force a resume attempt instead of waiting for the next server restart.
+    """
+    job = get_job(job_id)
+    if not job:
+        return {"error": "Job not found"}
+    if job.get("status") == "done":
+        return {"error": "Job already completed"}
+
+    background_tasks.add_task(resume_pipeline_job, job_id)
+    return {"job_id": job_id, "status": "resuming"}
 
 
 @app.get("/api/status/{job_id}")
 async def status(job_id: str):
     """Poll this endpoint to track pipeline progress."""
-    if job_id not in jobs:
+    job = get_job(job_id)
+    if not job:
         return {"error": "Job not found"}
-    job = jobs[job_id]
     return {
         "job_id":           job_id,
         "status":           job["status"],
@@ -145,30 +234,30 @@ async def status(job_id: str):
 @app.get("/api/result/{job_id}")
 async def result(job_id: str):
     """Get the full result once status == 'done'."""
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job or job["status"] != "done":
         return {"error": "Not ready"}
 
-    state = job["result"]
+    state = job.get("result", {})
     pitch = state.get("pitch_output")
 
     return {
         "completed_agents": job["completed_agents"],
-        "research":    _serialize(state.get("research_output")),
-        "competitor":  _serialize(state.get("competitor_output")),
-        "product":     _serialize(state.get("product_output")),
-        "branding":    _serialize(state.get("branding_output")),
-        "finance":     _serialize(state.get("finance_output")),
-        "gtm":         _serialize(state.get("gtm_output")),
-        "pitch":       _serialize(pitch),
-        "deck_title":  pitch.deck_title if pitch else None,
+        "research":    state.get("research_output"),
+        "competitor":  state.get("competitor_output"),
+        "product":     state.get("product_output"),
+        "branding":    state.get("branding_output"),
+        "finance":     state.get("finance_output"),
+        "gtm":         state.get("gtm_output"),
+        "pitch":       pitch,
+        "deck_title":  pitch.get("deck_title") if isinstance(pitch, dict) else None,
     }
 
 
 @app.get("/api/download/{job_id}")
 async def download(job_id: str):
     """Download the generated .pptx file."""
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job or not job.get("report_path"):
         return {"error": "File not ready"}
     path = job["report_path"]
@@ -187,7 +276,7 @@ async def partial_result(job_id: str):
     Returns whatever agent outputs are available RIGHT NOW.
     Frontend polls this every few seconds to show progressive results.
     """
-    job = jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
         return {"error": "Job not found"}
 
@@ -195,15 +284,5 @@ async def partial_result(job_id: str):
         "status":           job["status"],
         "completed_agents": job.get("completed_agents", []),
         "partial":          job.get("partial", {}),
-        # "report_path":      job.get("report_path"),
         "errors":           job.get("errors", []),
     }
-
-
-def _serialize(obj):
-    """Convert Pydantic model to dict safely."""
-    if obj is None:
-        return None
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump()
-    return obj

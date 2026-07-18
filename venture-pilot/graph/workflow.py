@@ -19,8 +19,11 @@ Usage:
     print(result["final_report_path"])
 """
 
+import os
+import atexit
+from contextlib import ExitStack
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.redis import RedisSaver
 
 from state import AppState
 from agents.planner    import run_planner_agent
@@ -45,15 +48,44 @@ GTM        = "gtm"
 PITCH      = "pitch"
 REPORT     = "report"
 
+REDIS_URL = os.getenv("REDIS_URL")
+
+# ── The checkpointer is created ONCE per process and reused for every job ──
+# Building a new RedisSaver per job (as before) opens a fresh connection
+# every single time, and — more importantly — nothing was ever calling
+# `.setup()`, which is what creates the RediSearch indices the saver needs
+# to actually read/write checkpoints.
+#
+# RedisSaver.from_conn_string(...) is documented as a context manager
+# (`with RedisSaver.from_conn_string(url) as checkpointer:`). Since we need
+# this checkpointer to live for the whole process instead of one `with`
+# block, we enter the context manager once via ExitStack and keep it open,
+# then register the matching close on process exit.
+_exit_stack = ExitStack()
+_checkpointer: RedisSaver | None = None
+
+
+def get_checkpointer() -> RedisSaver:
+    global _checkpointer
+    if _checkpointer is None:
+        if not REDIS_URL:
+            raise RuntimeError("REDIS_URL is not set — cannot create Redis checkpointer")
+        saver_cm = RedisSaver.from_conn_string(REDIS_URL)
+        _checkpointer = _exit_stack.enter_context(saver_cm)
+        _checkpointer.setup()  # idempotent — creates indices if they don't exist yet
+        atexit.register(_exit_stack.close)
+    return _checkpointer
+
 
 def build_graph(checkpointing: bool = False) -> StateGraph:
     """
     Build and compile the full Venture Pilot agent graph.
 
     Args:
-        checkpointing: If True, attaches an in-memory checkpointer so you
-                       can resume interrupted runs. Set False for simple
-                       single-shot runs (e.g. API calls).
+        checkpointing: If True, attaches the shared Redis checkpointer so
+                       runs can be resumed after a crash/restart using the
+                       same thread_id. Set False for simple single-shot
+                       runs that don't need to survive a process restart.
 
     Returns:
         A compiled LangGraph graph ready to invoke.
@@ -81,40 +113,25 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
     workflow.add_node(FINANCE,    run_finance_agent)
     workflow.add_node(GTM,        run_gtm_agent)
     workflow.add_node(PITCH,      run_pitch_agent)
-    # workflow.add_node(REPORT,     run_report_agent)
+    workflow.add_node(REPORT,     run_report_agent)
 
     # ── 3. Set entry point ────────────────────────────────────────────────
     workflow.set_entry_point(PLANNER)
 
     # ── 4. Wire edges ─────────────────────────────────────────────────────
-
-    # planner → research (sequential — research needs refined inputs)
     workflow.add_edge(PLANNER, RESEARCH)
-
-    # research → competitor + product (parallel fan-out)
     workflow.add_edge(RESEARCH, COMPETITOR)
     workflow.add_edge(COMPETITOR, PRODUCT)
-
-    # competitor + product → branding (fan-in — branding needs both)
-    # workflow.add_edge(COMPETITOR, BRANDING)
     workflow.add_edge(PRODUCT,    BRANDING)
-
-    # branding → finance + gtm (parallel fan-out)
     workflow.add_edge(BRANDING, FINANCE)
     workflow.add_edge(FINANCE, GTM)
-
-    # finance + gtm → pitch (fan-in — pitch needs both)
-    # workflow.add_edge(FINANCE, PITCH)
     workflow.add_edge(GTM,     PITCH)
-
-    # pitch → report → END
-    workflow.add_edge(PITCH,  END)
-    # workflow.add_edge(REPORT, END)
+    workflow.add_edge(PITCH,  REPORT)
+    workflow.add_edge(REPORT, END)
 
     # ── 5. Compile ────────────────────────────────────────────────────────
     if checkpointing:
-        memory = MemorySaver()
-        return workflow.compile(checkpointer=memory)
+        return workflow.compile(checkpointer=get_checkpointer())
 
     return workflow.compile()
 

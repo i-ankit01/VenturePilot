@@ -57,7 +57,6 @@ class RoadmapPhase(BaseModel):
 class ProductOutput(BaseModel):
 
     # ── CORE IDENTITY ────────────────────────────────────────────────────────
-
     usp: str = Field(
         description=(
             "Unique Selling Proposition — one sentence on what makes this "
@@ -98,7 +97,6 @@ class ProductOutput(BaseModel):
     monetization_model: MonetizationModel = Field(
         description="Primary way the product makes money."
     )
-
     # ── ROADMAP ──────────────────────────────────────────────────────────────
     roadmap: List[RoadmapPhase] = Field(
         description="3-phase roadmap covering 0 to 12 months.",
