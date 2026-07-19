@@ -13,8 +13,15 @@ interface Props { data: NonNullable<PartialResult["pitch_output"]> }
 const MONO = { fontFamily: "'DM Mono', monospace" };
 const NEON  = "linear-gradient(90deg, rgb(147,197,253) 0%, rgba(96,165,250,0.85) 60%, rgba(255,255,255,0.7) 100%)";
 
+type AccentKey = "blue" | "rose" | "emerald" | "amber";
+
+interface SlideConfigItem {
+  accent: AccentKey;
+  group: string;
+}
+
 // ─── Per-slide accent config ──────────────────────────────────────────────────
-const SLIDE_CONFIG = [
+const SLIDE_CONFIG: SlideConfigItem[] = [
   { accent: "blue",    group: "Intro" },       // 0  Cover
   { accent: "rose",    group: "Problem" },      // 1  Problem
   { accent: "blue",    group: "Solution" },     // 2  Solution
@@ -29,7 +36,15 @@ const SLIDE_CONFIG = [
   { accent: "amber",   group: "The Ask" },      // 11 Ask
 ];
 
-const ACCENT = {
+const ACCENT: Record<AccentKey, {
+  border: string;
+  bg: string;
+  text: string;
+  badge: string;
+  ring: string;
+  glow: string;
+  dot: string;
+}> = {
   blue:    { border: "border-blue-400/25",    bg: "bg-blue-500/[0.06]",    text: "text-blue-300",    badge: "border-blue-400/20 bg-blue-500/[0.08] text-blue-300",    ring: "ring-blue-400/30",   glow: "via-blue-400/40",    dot: "bg-blue-400" },
   rose:    { border: "border-rose-400/20",    bg: "bg-rose-500/[0.06]",    text: "text-rose-300",    badge: "border-rose-400/20 bg-rose-500/[0.08] text-rose-300",    ring: "ring-rose-400/30",   glow: "via-rose-400/40",    dot: "bg-rose-400" },
   emerald: { border: "border-emerald-400/20", bg: "bg-emerald-500/[0.06]", text: "text-emerald-300", badge: "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-300", ring: "ring-emerald-400/30", glow: "via-emerald-400/40", dot: "bg-emerald-400" },
