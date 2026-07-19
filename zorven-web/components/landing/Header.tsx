@@ -47,13 +47,8 @@ export default function Header() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              className="h-10 rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20"
-            >
-              Sign in
+            <Button asChild variant="default" size="sm" className="h-10 rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20">
+              <a href="/signin">Sign in</a>
             </Button>
           </div>
 
@@ -94,13 +89,8 @@ export default function Header() {
             </a>
 
             <div className="pt-4 border-t border-gray-800/50">
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                className="h-10 w-full rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20"
-              >
-                Sign in
+              <Button asChild variant="default" size="sm" className="h-10 w-full rounded-full px-5 text-sm font-medium bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15 hover:ring-white/20">
+                <a href="/signin">Sign in</a>
               </Button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { IconArrowRight } from "@tabler/icons-react";
 import Link from "next/link";
@@ -64,11 +65,13 @@ export default function Hero() {
         </div>
 
         <div className="relative z-10">
-          <img
-            src="https://i.postimg.cc/SKcdVTr1/Dashboard2.png"
+          <Image
+            src="/heroImage.png"
             alt="Dashboard preview showing analytics and metrics interface"
+            width={1600}
+            height={900}
             className="w-full h-auto rounded-lg shadow-2xl"
-            loading="eager"
+            priority
           />
         </div>
       </div>

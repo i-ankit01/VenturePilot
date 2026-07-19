@@ -1,10 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Zap } from "lucide-react";
-import { Handshake } from "lucide-react";
+import { LayoutDashboard, Handshake, Settings2 } from "lucide-react";
 
 const navItems = [
   {
@@ -12,7 +12,13 @@ const navItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+  
   { label: "Find Investors", href: "/investors", icon: Handshake },
+  {
+    label: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings2,
+  },
 ];
 
 const MONO = { fontFamily: "'DM Mono', monospace" };
@@ -33,9 +39,14 @@ export function Sidebar() {
 
       {/* Logo */}
       <div className="relative z-10 flex h-16 items-center gap-2.5 border-b border-white/[0.06] px-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]">
-          <Zap className="h-4 w-4 text-white" strokeWidth={2.5} />
-        </div>
+        <Image
+          src="/zorvenLogo.png"
+          alt="Zorven logo"
+          width={28}
+          height={28}
+          className="h-7 w-7 rounded-sm object-cover"
+          priority
+        />
         <div className="flex flex-col leading-none">
           <span
             className="text-[13px] font-semibold tracking-tight text-white/90"
@@ -43,9 +54,9 @@ export function Sidebar() {
           >
             Zorven.ai
           </span>
-          <span className="text-[10px] text-white/30 tracking-widest uppercase">
+          {/* <span className="text-[10px] text-white/30 tracking-widest uppercase md:mt-3">
             AI Builder
-          </span>
+          </span> */}
         </div>
       </div>
 

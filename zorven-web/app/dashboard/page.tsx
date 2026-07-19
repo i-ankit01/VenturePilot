@@ -8,6 +8,7 @@ import {
   Loader2, Rocket, BarChart3, Sparkles,
 } from "lucide-react";
 import SignOut from "@/components/auth/SignOut";
+import { IconDashboard } from "@tabler/icons-react";
 
 type ProjectStatus = "completed" | "building" | "draft";
 
@@ -190,7 +191,7 @@ export default async function DashboardPage() {
           <div className="mb-8 flex items-start justify-between">
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-blue-300" />
+                <IconDashboard className="h-4 w-4 text-blue-300" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-blue-300" style={MONO}>
                   Workspace
                 </span>

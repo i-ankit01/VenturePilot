@@ -4,7 +4,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Globe,
 } from "lucide-react";
 import {FooterBackgroundGradient} from "@/components/ui/hover-footer";
 import { TextHoverEffect } from "@/components/ui/hover-footer";
@@ -39,8 +38,8 @@ function HoverFooter() {
   const contactInfo = [
     {
       icon: <Mail size={18} className="text-[#3ca2fa]" />,
-      text: "hello@nurui.com",
-      href: "mailto:hello@nurui.com",
+      text: "hello@zorven.ai",
+      href: "mailto:hello@zorven.ai",
     },
     {
       icon: <Phone size={18} className="text-[#3ca2fa]" />,
@@ -54,13 +53,7 @@ function HoverFooter() {
   ];
 
   // Social media icons
-  const socialLinks = [
-    // { icon: <Facebook size={20} />, label: "Facebook", href: "#" },
-    // { icon: <Instagram size={20} />, label: "Instagram", href: "#" },
-    // { icon: <Twitter size={20} />, label: "Twitter", href: "#" },
-    // { icon: <Dribbble size={20} />, label: "Dribbble", href: "#" },
-    { icon: <Globe size={20} />, label: "Globe", href: "#" },
-  ];
+  const socialLinks: Array<{ icon: React.ReactNode; label: string; href: string }> = [];
 
   return (
     <footer className="bg-[#0F0F11]/10 relative h-fit rounded-3xl overflow-hidden m-8">
@@ -69,13 +62,11 @@ function HoverFooter() {
           {/* Brand section */}
           <div className="flex flex-col space-y-4">
             <div className="flex items-center space-x-2">
-              <span className="text-[#3ca2fa] text-3xl font-extrabold">
-                &hearts;
-              </span>
-              <span className="text-white text-3xl font-bold">Nur/ui</span>
+             
+              <span className="text-white text-3xl font-bold">Zorven</span>
             </div>
             <p className="text-sm leading-relaxed">
-              Nur UI is a modern React and Next.js based UI component library.
+              Zorven helps founders research, build, and launch startups with one AI-powered workflow.
             </p>
           </div>
 
@@ -130,33 +121,29 @@ function HoverFooter() {
           </div>
         </div>
 
-        <hr className="border-t border-transparent my-8" />
-
-        {/* Footer bottom */}
-        <div className="flex flex-col md:flex-row justify-between items-center text-sm space-y-4 md:space-y-0">
-          {/* Social icons */}
-          <div className="flex space-x-6 text-gray-400">
-            {socialLinks.map(({ icon, label, href }) => (
-              <a
-                key={label}
-                href={href}
-                aria-label={label}
-                className="hover:text-[#3ca2fa] transition-colors"
-              >
-                {icon}
-              </a>
-            ))}
-          </div>
-
-          {/* Copyright */}
-          <p className="text-center md:text-left">
-            &copy; {new Date().getFullYear()} Nurui. All rights reserved.
-          </p>
-        </div>
+        {socialLinks.length > 0 && (
+          <>
+            <hr className="border-t border-transparent my-8" />
+            <div className="flex flex-col md:flex-row justify-between items-center text-sm space-y-4 md:space-y-0">
+              <div className="flex space-x-6 text-gray-400">
+                {socialLinks.map(({ icon, label, href }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={label}
+                    className="hover:text-[#3ca2fa] transition-colors"
+                  >
+                    {icon}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Text hover effect */}
-      <div className="lg:flex hidden h-[30rem] -mt-52 -mb-36">
+      <div className="lg:flex hidden h-[30rem] -mt-40 -mb-36">
         <TextHoverEffect text="Zorven" className="z-50" />
       </div>
 
