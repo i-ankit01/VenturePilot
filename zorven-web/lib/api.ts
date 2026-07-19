@@ -2,7 +2,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PipelineStatus = "idle" | "running" | "done" | "error";
+export type PipelineStatus = "idle" | "running" | "awaiting_branding_approval" | "done" | "error";
 
 export interface PartialResult {
   // Planner
@@ -223,6 +223,26 @@ export interface PitchRequest {
   stage?: string;   // default "idea"
 }
 
+// ── new types for the branding review payload ───────────────────────────
+export interface BrandingApprovals {
+  recommended_name: boolean;
+  recommended_tagline: boolean;
+  color_palette: boolean;
+}
+
+export interface BrandingReview {
+  branding_output: NonNullable<PartialResult["branding_output"]>;
+  approvals: BrandingApprovals;
+  instruction: string;
+}
+
+export interface BrandingReviewAction {
+  section: "recommended_name" | "recommended_tagline" | "color_palette";
+  action: "approve" | "edit" | "regenerate";
+  value?: string | NonNullable<PartialResult["branding_output"]>["color_palette"];
+}
+
+
 export async function startPipeline(payload: PitchRequest): Promise<{ job_id: string }> {
   const res = await fetch(`${API_URL}/api/analyze`, {
     method: "POST",
@@ -240,5 +260,29 @@ export async function startPipeline(payload: PitchRequest): Promise<{ job_id: st
 export async function fetchPartial(jobId: string): Promise<PartialResponse> {
   const res = await fetch(`${API_URL}/api/partial/${jobId}`);
   if (!res.ok) throw new Error(`Failed to fetch partial: ${res.statusText}`);
+  return res.json();
+}
+
+// ── new API calls ────────────────────────────────────────────────────────
+export async function fetchBrandingReview(
+  jobId: string
+): Promise<
+  | { status: "awaiting_branding_approval"; review: BrandingReview }
+  | { status: PipelineStatus }
+> {
+  const res = await fetch(`${API_URL}/api/branding-review/${jobId}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch branding review: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function submitBrandingAction(jobId: string, action: BrandingReviewAction): Promise<{ job_id: string; status: string } | { error: string }> {
+  const res = await fetch(`${API_URL}/api/resume/${jobId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(action),
+  });
+  if (!res.ok) throw new Error(`Failed to submit branding action: ${res.statusText}`);
   return res.json();
 }

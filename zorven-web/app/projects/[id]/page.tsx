@@ -12,6 +12,8 @@ import { FinancePanel } from "@/components/workspace/panels/finance-panel";
 import { GtmPanel } from "@/components/workspace/panels/gtm-panel";
 import { PitchPanel } from "@/components/workspace/panels/pitch-panel";
 import { usePipelineProgress } from "@/hooks/use-pipeline-progress";
+import { BrandingApprovalOverlay } from "@/components/workspace/branding-approval-overlay";
+
 import { cn } from "@/lib/utils";
 import {
   Cpu,
@@ -91,10 +93,7 @@ function PanelSkeleton({ label }: { label: string }) {
           <Loader2 className="h-5 w-5 animate-spin text-blue-300" />
         </div>
       </div>
-      <p
-        className="text-sm font-medium text-white/90"
-        style={MONO}
-      >
+      <p className="text-sm font-medium text-white/90" style={MONO}>
         {label} agent is working…
       </p>
       <p className="mt-1 text-[12px] text-white/40">
@@ -123,10 +122,7 @@ function LockedPanel({ label }: { label: string }) {
         <Lock className="h-5 w-5 text-white/30" />
       </div>
       <p className="text-sm text-white/40">
-        <span
-          className="font-medium text-white/80"
-          style={MONO}
-        >
+        <span className="font-medium text-white/80" style={MONO}>
           {label}
         </span>{" "}
         hasn't started yet
@@ -146,11 +142,23 @@ interface PageProps {
 export default function WorkspacePage({ params }: PageProps) {
   const { id: jobId } = use(params);
   // update destructure
-  const { data, status, error, completedAgents, projectTitle } = usePipelineProgress(jobId);
+  const {
+    data,
+    status,
+    error,
+    completedAgents,
+    projectTitle,
+    brandingReview,
+    submitAction,
+    isSubmittingAction,
+  } = usePipelineProgress(jobId);
   // console.log(data,status,error,completedAgents)
   const [activeTab, setActiveTab] = useState<TabKey>("planner");
 
-  const isRunning = status === "running" || status === "idle";
+  const isRunning =
+    status === "running" ||
+    status === "idle" ||
+    status === "awaiting_branding_approval";
 
   function renderPanel(tab: (typeof TABS)[number]) {
     const hasData = data && (data as any)[tab.outputKey];
@@ -222,15 +230,20 @@ export default function WorkspacePage({ params }: PageProps) {
             >
               Project
             </p>
-            <p
-              className="text-[13px] font-semibold text-white/90"
-              style={MONO}
-            >
+            <p className="text-[13px] font-semibold text-white/90" style={MONO}>
               {projectTitle || jobId}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isRunning && (
+            {status === "awaiting_branding_approval" && (
+              <span
+                className="flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-300"
+                style={MONO}
+              >
+                Awaiting your review
+              </span>
+            )}
+            {status === "running" && (
               <span
                 className="flex items-center gap-1.5 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold text-blue-300"
                 style={MONO}
@@ -289,10 +302,7 @@ export default function WorkspacePage({ params }: PageProps) {
                     )}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
-                  <span
-                    className="text-[12px] font-medium"
-                    style={MONO}
-                  >
+                  <span className="text-[12px] font-medium" style={MONO}>
                     {tab.label}
                   </span>
 
@@ -318,7 +328,7 @@ export default function WorkspacePage({ params }: PageProps) {
             {/* Agent progress bar (top of content) */}
             <div className="shrink-0 px-6 pt-5 pb-4">
               <AgentStatus
-              jobId={jobId}
+                jobId={jobId}
                 completedAgents={completedAgents}
                 pipelineStatus={status}
               />
@@ -341,6 +351,13 @@ export default function WorkspacePage({ params }: PageProps) {
           </div>
         </div>
       </div>
+      {brandingReview && (
+        <BrandingApprovalOverlay
+          review={brandingReview}
+          onSubmit={submitAction}
+          isSubmitting={isSubmittingAction}
+        />
+      )}
     </AppShell>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { fetchPartial, PartialResult, PipelineStatus } from "@/lib/api";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  fetchPartial, fetchBrandingReview, submitBrandingAction,
+  PartialResult, PipelineStatus, BrandingReview, BrandingReviewAction,
+} from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 
 const OUTPUT_KEYS = [
@@ -16,9 +19,11 @@ export function usePipelineProgress(projectId: string | null) {
   const [data, setData]                 = useState<PartialResult | null>(null);
   const [status, setStatus]             = useState<PipelineStatus>("idle");
   const [error, setError]               = useState<string | null>(null);
+  const [brandingReview, setBrandingReview] = useState<BrandingReview | null>(null); // ← NEW
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);               // ← NEW
   const intervalRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedRef                        = useRef(false);
-  const skipPollingRef                  = useRef(false); // ← NEW
+  const skipPollingRef                  = useRef(false);
 
   // ── Step 1 ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -77,17 +82,25 @@ export function usePipelineProgress(projectId: string | null) {
 
   // ── Step 2 ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    console.log("[Step2] fired — jobId:", jobId, "skipPolling:", skipPollingRef.current); // debug
-    
-    if (!jobId || skipPollingRef.current) return; // ← ref is always current, no stale closure
+    if (!jobId || skipPollingRef.current) return;
 
     setStatus("running");
 
-    intervalRef.current = setInterval(async () => {
+    const poll = async () => {
       try {
         const json = await fetchPartial(jobId);
         setData(json.partial);
         setStatus(json.status);
+
+        if (json.status === "awaiting_branding_approval") {
+          // fetch the freshest review payload (has the live interrupt() value)
+          const reviewRes = await fetchBrandingReview(jobId);
+          if (reviewRes.status === "awaiting_branding_approval") {
+            setBrandingReview(reviewRes.review);
+          }
+        } else {
+          setBrandingReview(null);
+        }
 
         if (json.status === "done" || json.status === "error") {
           clearInterval(intervalRef.current!);
@@ -97,12 +110,16 @@ export function usePipelineProgress(projectId: string | null) {
         setStatus("error");
         clearInterval(intervalRef.current!);
       }
-    }, 3000);
+    };
+
+    poll(); // fire once immediately, don't wait 3s for the first check
+    intervalRef.current = setInterval(poll, 3000);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [jobId]);
+
 
   // ── Step 3 (unchanged) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -144,9 +161,28 @@ export function usePipelineProgress(projectId: string | null) {
       
   }, [status, data, projectId]);
 
+   // ── NEW: submit an approve/edit/regenerate action ────────────────────────
+  const submitAction = useCallback(async (action: BrandingReviewAction) => {
+    if (!jobId) return;
+    setIsSubmittingAction(true);
+    try {
+      await submitBrandingAction(jobId, action);
+      // Optimistically clear review so the UI shows a "waiting..." state
+      // instead of stale data until the next poll picks up the change.
+      setBrandingReview(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit action");
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  }, [jobId]);
+
   const completedAgents: string[] = data
     ? OUTPUT_KEYS.filter((k) => data[k] != null)
     : [];
 
-  return { data, status, error, completedAgents, projectTitle };
+  return {
+    data, status, error, completedAgents, projectTitle, jobId,
+    brandingReview, submitAction, isSubmittingAction, // ← NEW
+  };
 }

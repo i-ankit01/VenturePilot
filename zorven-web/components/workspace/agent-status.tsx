@@ -80,7 +80,7 @@ export function AgentStatus({ jobId, completedAgents, pipelineStatus }: AgentSta
           <button
             type="button"
             onClick={handleResume}
-            disabled={isResuming}
+            disabled={isResuming || pipelineStatus === "awaiting_branding_approval"}
             className={cn(
               "flex items-center gap-1 rounded-sm border border-white/[0.08] bg-white/[0.03] px-2 py-0.5",
               "text-[10px] font-medium text-white/50 transition-all hover:bg-white/[0.06] hover:text-white/80",
