@@ -196,8 +196,24 @@ export default function WorkspacePage({ params }: PageProps) {
         return <CompetitorPanel data={data!.competitor_output!} />;
       case "product":
         return <ProductPanel data={data!.product_output!} />;
-      case "branding":
+      case "branding": {
+        if (status === "awaiting_branding_approval") {
+          return (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-400/20">
+                <Lock className="h-5 w-5 text-amber-400/60" />
+              </div>
+              <p className="text-sm text-white/60">
+                Branding is pending your review
+              </p>
+              <p className="mt-1 text-[12px] text-white/30">
+                Complete the approval overlay to unlock this tab
+              </p>
+            </div>
+          );
+        }
         return <BrandingPanel data={data!.branding_output!} />;
+      }
       case "finance":
         return <FinancePanel data={data!.finance_output!} />;
       case "gtm":

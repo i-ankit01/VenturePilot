@@ -264,16 +264,12 @@ export async function fetchPartial(jobId: string): Promise<PartialResponse> {
 }
 
 // ── new API calls ────────────────────────────────────────────────────────
-export async function fetchBrandingReview(
-  jobId: string
-): Promise<
+export async function fetchBrandingReview(jobId: string): Promise<
   | { status: "awaiting_branding_approval"; review: BrandingReview }
-  | { status: PipelineStatus }
+  | { status: Exclude<PipelineStatus, "awaiting_branding_approval"> }
 > {
   const res = await fetch(`${API_URL}/api/branding-review/${jobId}`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch branding review: ${res.statusText}`);
-  }
+  if (!res.ok) throw new Error(`Failed to fetch branding review: ${res.statusText}`);
   return res.json();
 }
 
