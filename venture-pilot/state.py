@@ -59,3 +59,10 @@ class AppState(TypedDict):
     # ── META ───────────────────────────────────────────────────────────────
     errors:            Optional[List[str]]            # any agent logs errors here
     completed_agents:  Optional[List[str]]            # tracks what has run
+
+    # ── HITL: BRANDING APPROVAL ──────────────────────────────────────────
+    # Tracks approval status for the 3 human-reviewed sections of branding_output.
+    # Keys: "recommended_name", "recommended_tagline", "color_palette"
+    # All three must be True before the graph proceeds past human_approval.
+    branding_approvals:         Optional[dict]   # {"recommended_name": bool, "recommended_tagline": bool, "color_palette": bool}
+    awaiting_branding_approval: Optional[bool]   # True while paused at human_approval node

@@ -26,27 +26,34 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.redis import RedisSaver
 
 from state import AppState
-from agents.planner    import run_planner_agent
-from agents.research   import run_research_agent
-from agents.competitor import run_competitor_agent
-from agents.product    import run_product_agent
-from agents.branding   import run_branding_agent
-from agents.finance    import run_finance_agent
-from agents.gtm        import run_gtm_agent
-from agents.pitch      import run_pitch_agent
-from agents.report     import run_report_agent
+from agents.planner         import run_planner_agent
+from agents.research        import run_research_agent
+from agents.competitor      import run_competitor_agent
+from agents.product         import run_product_agent
+from agents.branding        import run_branding_agent
+from agents.human_approval  import (
+    run_human_approval_node,
+    run_branding_regenerate_node,
+    route_after_human_approval,
+)
+from agents.finance         import run_finance_agent
+from agents.gtm             import run_gtm_agent
+from agents.pitch           import run_pitch_agent
+from agents.report          import run_report_agent
 
 
 # ── Node name constants ───────────────────────────────────────────────────────
-PLANNER    = "planner"
-RESEARCH   = "research"
-COMPETITOR = "competitor"
-PRODUCT    = "product"
-BRANDING   = "branding"
-FINANCE    = "finance"
-GTM        = "gtm"
-PITCH      = "pitch"
-REPORT     = "report"
+PLANNER          = "planner"
+RESEARCH         = "research"
+COMPETITOR       = "competitor"
+PRODUCT          = "product"
+BRANDING         = "branding"
+HUMAN_APPROVAL   = "human_approval"
+REGENERATE       = "regenerate_section"
+FINANCE          = "finance"
+GTM              = "gtm"
+PITCH            = "pitch"
+REPORT           = "report"
 
 REDIS_URL = os.getenv("REDIS_URL")
 
@@ -104,35 +111,40 @@ def build_graph(checkpointing: bool = False) -> StateGraph:
     # ── 1. Create graph with AppState as the shared state type ────────────
     workflow = StateGraph(AppState)
 
-    # ── 2. Register all nodes ─────────────────────────────────────────────
-    workflow.add_node(PLANNER,    run_planner_agent)
-    workflow.add_node(RESEARCH,   run_research_agent)
-    workflow.add_node(COMPETITOR, run_competitor_agent)
-    workflow.add_node(PRODUCT,    run_product_agent)
-    workflow.add_node(BRANDING,   run_branding_agent)
-    workflow.add_node(FINANCE,    run_finance_agent)
-    workflow.add_node(GTM,        run_gtm_agent)
-    workflow.add_node(PITCH,      run_pitch_agent)
-    workflow.add_node(REPORT,     run_report_agent)
+    workflow.add_node(PLANNER,        run_planner_agent)
+    workflow.add_node(RESEARCH,       run_research_agent)
+    workflow.add_node(COMPETITOR,     run_competitor_agent)
+    workflow.add_node(PRODUCT,        run_product_agent)
+    workflow.add_node(BRANDING,       run_branding_agent)
+    workflow.add_node(HUMAN_APPROVAL, run_human_approval_node)
+    workflow.add_node(REGENERATE,     run_branding_regenerate_node)
+    workflow.add_node(FINANCE,        run_finance_agent)
+    workflow.add_node(GTM,            run_gtm_agent)
+    workflow.add_node(PITCH,          run_pitch_agent)
+    workflow.add_node(REPORT,         run_report_agent)
 
-    # ── 3. Set entry point ────────────────────────────────────────────────
     workflow.set_entry_point(PLANNER)
 
-    # ── 4. Wire edges ─────────────────────────────────────────────────────
     workflow.add_edge(PLANNER, RESEARCH)
     workflow.add_edge(RESEARCH, COMPETITOR)
     workflow.add_edge(COMPETITOR, PRODUCT)
-    workflow.add_edge(PRODUCT,    BRANDING)
-    workflow.add_edge(BRANDING, FINANCE)
+    workflow.add_edge(PRODUCT, BRANDING)
+
+    workflow.add_edge(BRANDING, HUMAN_APPROVAL)
+    workflow.add_conditional_edges(
+        HUMAN_APPROVAL,
+        route_after_human_approval,
+        {HUMAN_APPROVAL: HUMAN_APPROVAL, REGENERATE: REGENERATE, FINANCE: FINANCE},
+    )
+    workflow.add_edge(REGENERATE, HUMAN_APPROVAL)
+
     workflow.add_edge(FINANCE, GTM)
-    workflow.add_edge(GTM,     PITCH)
-    workflow.add_edge(PITCH,  REPORT)
+    workflow.add_edge(GTM, PITCH)
+    workflow.add_edge(PITCH, REPORT)
     workflow.add_edge(REPORT, END)
 
-    # ── 5. Compile ────────────────────────────────────────────────────────
     if checkpointing:
         return workflow.compile(checkpointer=get_checkpointer())
-
     return workflow.compile()
 
 
