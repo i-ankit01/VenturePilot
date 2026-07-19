@@ -64,29 +64,50 @@ def _serialize_state(state: dict) -> dict:
         out[k] = v.model_dump() if hasattr(v, "model_dump") else v
     return out
 
+def _normalize_chunk(chunk):
+    """
+    stream_mode="updates" normally yields {node_name: state}. But when
+    resuming past an active interrupt(), LangGraph can yield a tuple like
+    (namespace_tuple, {node_name: state}) instead. Unwrap to the dict form
+    either way.
+    """
+    if isinstance(chunk, tuple):
+        chunk = chunk[-1]
+    return chunk
+
 
 def _stream_graph(job_id: str, graph, config: dict, input_state):
-    """
-    Runs graph.stream() and pushes every node's output into the job record
-    in Redis as it arrives. Shared by both the fresh-run path and the
-    resume path — the only difference between them is `input_state`:
-    a full initial state to start fresh, or `None` to resume from whatever
-    checkpoint already exists for this thread_id.
-    """
-    update_job(job_id, status="running")
+    update_job(job_id, status="running", errors=[])
 
     try:
-        # .stream() yields {"node_name": state_snapshot} after each node
-        for chunk in graph.stream(input_state, stream_mode="updates", config=config):
+        for raw_chunk in graph.stream(input_state, stream_mode="updates", config=config):
+            chunk = _normalize_chunk(raw_chunk)
+
+            if not isinstance(chunk, dict) or not chunk:
+                continue
+
+            # ── Interrupt chunk — this is the reliable signal, not get_state() ──
+            if "__interrupt__" in chunk:
+                interrupts = chunk["__interrupt__"]
+                interrupt_payload = interrupts[0].value if interrupts else None
+                update_job(
+                    job_id,
+                    status="awaiting_branding_approval",
+                    branding_review=interrupt_payload,
+                )
+                print(f"[server] job={job_id} paused for branding approval")
+                return  # stop streaming — graph is genuinely paused, nothing more to read
+
             node_name = list(chunk.keys())[0]
             node_state = chunk[node_name]
 
-            job = get_job(job_id) or _new_job_record()
+            if not isinstance(node_state, dict):
+                continue
 
+            job = get_job(job_id) or _new_job_record()
             result = job.get("result", {})
             result.update(_serialize_state(node_state))
 
-            # grab whatever output this agent just wrote
             partial = job.get("partial", {})
             output_key = f"{node_name}_output"
             if output_key in node_state and node_state[output_key] is not None:
@@ -95,7 +116,6 @@ def _stream_graph(job_id: str, graph, config: dict, input_state):
                     output.model_dump() if hasattr(output, "model_dump") else output
                 )
 
-            # track completed agents
             completed = node_state.get("completed_agents") or job.get("completed_agents", [])
 
             updates = {
@@ -104,39 +124,14 @@ def _stream_graph(job_id: str, graph, config: dict, input_state):
                 "completed_agents": completed,
             }
 
-            # special case: report writes final_report_path not *_output
             if "final_report_path" in node_state:
                 updates["report_path"] = node_state["final_report_path"]
 
             update_job(job_id, **updates)
             print(f"[server] job={job_id} agent done: {node_name}")
 
-                # ── NEW: figure out WHY the stream stopped ──────────────────────
-        snapshot = graph.get_state(config)
-
-        if snapshot and snapshot.next:
-            # Graph didn't finish. Either it's paused on an interrupt()
-            # (human_approval) or it crashed mid-node. Tell them apart by
-            # checking for a live interrupt payload on the pending task.
-            interrupt_payload = None
-            for task in snapshot.tasks:
-                if task.interrupts:
-                    interrupt_payload = task.interrupts[0].value
-                    break
-
-            if interrupt_payload is not None:
-                update_job(
-                    job_id,
-                    status="awaiting_branding_approval",
-                    branding_review=interrupt_payload,
-                )
-                print(f"[server] job={job_id} paused for branding approval")
-            else:
-                # Stopped mid-node without an interrupt = crash. Leave status
-                # as "running" so the startup crash-recovery sweep picks it up.
-                print(f"[server] job={job_id} stream ended unexpectedly, next={snapshot.next}")
-        else:
-            update_job(job_id, status="done")
+        # ── Loop ended without an interrupt chunk = actually finished ──
+        update_job(job_id, status="done")
 
     except Exception as e:
         job = get_job(job_id) or _new_job_record()
@@ -173,13 +168,6 @@ def run_pipeline_job(job_id: str, request: PitchRequest):
 
 
 def resume_pipeline_job(job_id: str, resume_payload: dict | None = None):
-    """
-    Resume a job. Two cases, same mechanism:
-      - resume_payload is None  → crash recovery: "just continue" (used by
-        the manual /api/resume endpoint with no body, and the startup sweep)
-      - resume_payload is a dict → HITL resume: becomes Command(resume=...),
-        which is what interrupt() inside human_approval_node returns
-    """
     graph = build_graph(checkpointing=True)
     config = {"configurable": {"thread_id": job_id}}
 
@@ -193,10 +181,21 @@ def resume_pipeline_job(job_id: str, resume_payload: dict | None = None):
             update_job(job_id, status="error", errors=errors)
         return
 
+    # Use the job record's own status instead of introspecting snapshot.tasks —
+    # we set this ourselves the moment we detected the __interrupt__ chunk,
+    # so it's a reliable source of truth regardless of LangGraph version quirks.
+    job = get_job(job_id)
+    is_awaiting_hitl = job and job.get("status") == "awaiting_branding_approval"
+
+    if is_awaiting_hitl and resume_payload is None:
+        print(f"[server] job={job_id} refused bare resume — awaiting HITL action, not a crash")
+        return
+
     input_state = Command(resume=resume_payload) if resume_payload is not None else None
 
     print(f"[server] resuming job={job_id} from node(s): {snapshot.next}")
     _stream_graph(job_id, graph, config, input_state)
+
 
 
 @app.on_event("startup")

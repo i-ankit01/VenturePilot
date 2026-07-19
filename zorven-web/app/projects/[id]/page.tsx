@@ -34,6 +34,7 @@ import { ReportPanel } from "@/components/workspace/panels/report-panel";
 const MONO = { fontFamily: "'DM Mono', monospace" };
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
+
 const TABS = [
   { key: "planner", label: "Planner", icon: Cpu, outputKey: "planner_output" },
   {
@@ -140,7 +141,7 @@ interface PageProps {
 }
 
 export default function WorkspacePage({ params }: PageProps) {
-  const { id: jobId } = use(params);
+  const { id: projectId } = use(params);
   // update destructure
   const {
     data,
@@ -150,8 +151,9 @@ export default function WorkspacePage({ params }: PageProps) {
     projectTitle,
     brandingReview,
     submitAction,
+    jobId,
     isSubmittingAction,
-  } = usePipelineProgress(jobId);
+  } = usePipelineProgress(projectId);
   // console.log(data,status,error,completedAgents)
   const [activeTab, setActiveTab] = useState<TabKey>("planner");
 
@@ -247,7 +249,7 @@ export default function WorkspacePage({ params }: PageProps) {
               Project
             </p>
             <p className="text-[13px] font-semibold text-white/90" style={MONO}>
-              {projectTitle || jobId}
+              {projectTitle || projectId}
             </p>
           </div>
           <div className="flex items-center gap-2">
