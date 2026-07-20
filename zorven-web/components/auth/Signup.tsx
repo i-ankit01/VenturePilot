@@ -36,7 +36,7 @@ export default function SignUp() {
 
       if (result.status === "success") {
         toast.success("Account created!", {
-          description: "Welcome to ZyqoMedia. Redirecting to sign in...",
+          description: "Welcome to zorven.ai.. Redirecting to sign in...",
         });
         router.push("/login");
       } else {
@@ -84,7 +84,7 @@ export default function SignUp() {
             Create your account
           </h1>
           <p className="text-sm text-gray-500">
-            Join ZyqoMedia and start collaborating today
+            Join Zorven.ai and start building today
           </p>
         </div>
 
